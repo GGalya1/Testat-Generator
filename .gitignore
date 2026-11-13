@@ -1,0 +1,15 @@
+target/
+
+# Enthalten Schluessel, Matrikelnummern oder Loesungen - nie committen
+*.werk
+!beispiel/*.werk
+*_zuordnung.csv
+*.zip
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
