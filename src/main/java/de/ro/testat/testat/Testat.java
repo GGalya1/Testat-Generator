@@ -58,24 +58,18 @@ public final class Testat {
         return exercises.stream().map(Exercise::describe).collect(Collectors.joining(" "));
     }
 
-    /** Erzeugt das Blatt fuer einen Seed. */
-    public Result generate(long seed) {
-        StringBuilder aufgabe = new StringBuilder();
-        StringBuilder loesung = new StringBuilder();
-        List<Exercise.Part> parts = new ArrayList<>();
-        for (int i = 0; i < exercises.size(); i++) {
-            Exercise.Part p = exercises.get(i).generate(new Random(subSeed(seed, i)), i + 1);
-            parts.add(p);
-            aufgabe.append(p.aufgabe()).append('\n');
-            if (i > 0) {
-                loesung.append("\\clearpage\n");
-            }
-            loesung.append(p.loesung()).append('\n');
-        }
-        return new Result(aufgabe.toString(), loesung.toString(), List.copyOf(parts));
+    /** Alle Praeambel-Zeilen der Aufgaben, ohne Doppelte, in Reihenfolge des ersten Auftretens. */
+    public List<String> preamble() {
+        return exercises.stream().flatMap(e -> e.preamble().stream()).distinct().toList();
     }
 
-    public record Result(String aufgabe, String loesung, List<Exercise.Part> parts) {
+    /** Erzeugt alle Aufgaben fuer einen Seed. */
+    public List<Exercise.Part> generate(long seed) {
+        List<Exercise.Part> parts = new ArrayList<>();
+        for (int i = 0; i < exercises.size(); i++) {
+            parts.add(exercises.get(i).generate(new Random(subSeed(seed, i))));
+        }
+        return List.copyOf(parts);
     }
 
     /** SplitMix64-Mischung: unabhaengige Seeds je Position. */

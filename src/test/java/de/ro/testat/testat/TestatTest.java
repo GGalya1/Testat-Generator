@@ -29,32 +29,28 @@ class TestatTest {
     @Test
     void sameSeedGivesSameSheet() {
         Testat t = Templates.get("kodierung").orElseThrow();
-        Testat.Result a = t.generate(42L);
-        assertEquals(a.aufgabe(), t.generate(42L).aufgabe());
-        assertEquals(a.loesung(), t.generate(42L).loesung());
-        assertNotEquals(a.aufgabe(), t.generate(43L).aufgabe());
-        assertEquals(2, a.parts().size());
+        List<Exercise.Part> a = t.generate(42L);
+        assertEquals(a, t.generate(42L));
+        assertNotEquals(a, t.generate(43L));
+        assertEquals(2, a.size());
     }
 
     @Test
-    void exercisesKeepOrderAndNumbering() {
+    void exercisesKeepOrder() {
         Testat t = Testat.builder("test", "Test")
                 .add(new MachineCodeToAsm("R"))
                 .add(new AsmToMachineCode("B"))
                 .build();
-        Testat.Result r = t.generate(1L);
-        assertTrue(r.parts().get(0).aufgabe().contains("Aufgabe 1: Maschinencode"));
-        assertTrue(r.parts().get(1).aufgabe().contains("Aufgabe 2: Assembler"));
-        assertTrue(r.aufgabe().indexOf("Aufgabe 1") < r.aufgabe().indexOf("Aufgabe 2"));
+        List<Exercise.Part> r = t.generate(1L);
+        assertTrue(r.get(0).titel().startsWith("Maschinencode"));
+        assertTrue(r.get(1).titel().startsWith("Assembler"));
     }
 
     @Test
     void changingALaterExerciseKeepsEarlierOnesUnchanged() {
         Testat a = Testat.builder("test", "Test").add(new AsmToMachineCode()).add(new AsmToMachineCode("B")).build();
         Testat b = Testat.builder("test", "Test").add(new AsmToMachineCode()).add(new MachineCodeToAsm("J")).build();
-        Exercise.Part pa = a.generate(99L).parts().get(0);
-        Exercise.Part pb = b.generate(99L).parts().get(0);
-        assertEquals(pa.aufgabe(), pb.aufgabe());
+        assertEquals(a.generate(99L).get(0), b.generate(99L).get(0));
     }
 
     @Test
@@ -71,8 +67,16 @@ class TestatTest {
         Templates.all().forEach((id, supplier) -> {
             Testat t = supplier.get();
             assertEquals(id, t.id(), "Vorlagen-ID und Builder-ID muessen gleich sein");
-            assertTrue(!t.generate(5L).aufgabe().isBlank());
+            assertTrue(!t.generate(5L).get(0).aufgabe().isBlank());
         });
+    }
+
+    @Test
+    void preambleIsCollectedWithoutDuplicates() {
+        Testat t = Templates.get("kodierung-stufen").orElseThrow();
+        List<String> pre = t.preamble();
+        assertEquals((long) pre.size(), pre.stream().distinct().count());
+        assertTrue(pre.contains("\\usepackage{tikz}"));
     }
 
     @Test
@@ -81,7 +85,7 @@ class TestatTest {
         try {
             Locale.setDefault(Locale.GERMANY);
             Testat t = Testat.builder("test", "Test").add(new AsmToMachineCode("B")).build();
-            String tex = t.generate(7L).loesung();
+            String tex = t.generate(7L).get(0).loesung();
             assertTrue(tex.contains("(0.25,"), "TikZ-Koordinaten muessen einen Punkt verwenden");
             assertTrue(!tex.matches("(?s).*\\(\\d+,\\d+,.*"), "Komma als Dezimaltrenner in Koordinaten gefunden");
         } finally {

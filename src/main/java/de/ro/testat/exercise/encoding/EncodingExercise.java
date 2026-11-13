@@ -32,8 +32,30 @@ abstract class EncodingExercise implements Exercise {
         return id() + "(" + auswahl + ")";
     }
 
+    /** TikZ fuer die Schemata und die Farben (gleiche Farbe = gleiche Herkunft). */
+    private static final List<String> PREAMBLE = List.of(
+            "\\usepackage{tikz}",
+            "\\usetikzlibrary{decorations.pathreplacing}",
+            """
+            % Farben der Kodier-Schemata: gleiche Farbe = gleiche Herkunft
+            \\definecolor{cMn}{HTML}{4B5563}    % aus dem Mnemonic: opcode, funct3, funct7
+            \\definecolor{cRd}{HTML}{D97706}    % rd
+            \\definecolor{cRsA}{HTML}{2563EB}   % rs1
+            \\definecolor{cRsB}{HTML}{16A34A}   % rs2
+            \\definecolor{cSh}{HTML}{0891B2}    % shamt
+            \\definecolor{cImmA}{HTML}{DC2626}  % Immediate-Gruppen
+            \\definecolor{cImmB}{HTML}{9333EA}
+            \\definecolor{cImmC}{HTML}{0D9488}
+            \\definecolor{cImmD}{HTML}{B45309}
+            \\definecolor{cImmGen}{HTML}{7C3AED}""");
+
     @Override
-    public Part generate(Random rng, int nr) {
+    public List<String> preamble() {
+        return PREAMBLE;
+    }
+
+    @Override
+    public Part generate(Random rng) {
         Mnemonic mn = pool.get(rng.nextInt(pool.size()));
         Instance in = InstanceGenerator.generate(mn, rng);
         Encoder.Encoded enc = Encoder.encode(in);
@@ -44,7 +66,7 @@ abstract class EncodingExercise implements Exercise {
             frage += String.format(" (PC=0x%08X)", in.pc());
             antwort += String.format(" (ziel=0x%08X)", in.target());
         }
-        return new Part(EncodingTex.aufgabe(in, enc, direction, nr),
-                EncodingTex.loesung(in, enc, direction, nr), frage, antwort);
+        return new Part(EncodingTex.titel(direction), EncodingTex.aufgabe(in, enc, direction),
+                EncodingTex.loesung(in, enc, direction), frage, antwort);
     }
 }

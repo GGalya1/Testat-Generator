@@ -29,10 +29,15 @@ public final class EncodingTex {
     // Aufgabe (fuer das Blatt der Studierenden)
     // ------------------------------------------------------------------
 
-    public static String aufgabe(Instance in, Encoded enc, Direction dir, int nr) {
+    /** Ueberschrift der Aufgabe (die Klasse tudaexercise setzt "Aufgabe N:" davor). */
+    public static String titel(Direction dir) {
+        return dir == Direction.ASM2BIN ? "Assembler $\\rightarrow$ Maschinencode"
+                : "Maschinencode $\\rightarrow$ Assembler";
+    }
+
+    public static String aufgabe(Instance in, Encoded enc, Direction dir) {
         StringBuilder L = new StringBuilder();
         if (dir == Direction.ASM2BIN) {
-            L.append(f("\\subsection*{Aufgabe %d: Assembler $\\rightarrow$ Maschinencode}%n", nr));
             L.append(f("Berechnen Sie den Maschinencode f\\\"ur den Befehl %s.%n", Tex.asm(in, false, false)));
             if (in.format().isPcRelative()) {
                 L.append(f("Der Befehl steht an Adresse \\texttt{%s}, die Marke \\texttt{ziel} an Adresse \\texttt{%s}.%n",
@@ -40,7 +45,6 @@ public final class EncodingTex {
             }
             L.append("\\par Geben Sie das Ergebnis sowohl bin\\\"ar als auch hexadezimal an.\n");
         } else {
-            L.append(f("\\subsection*{Aufgabe %d: Maschinencode $\\rightarrow$ Assembler}%n", nr));
             L.append(f("Bestimmen Sie den Assemblerbefehl zum Maschinencode \\texttt{%s}.%n", enc.hex()));
             L.append("Verwenden Sie ABI-Registernamen (z.\\,B. \\texttt{a0}).\n");
             if (in.format().isPcRelative()) {
@@ -55,20 +59,13 @@ public final class EncodingTex {
     // Loesung (fuer Tutor:innen)
     // ------------------------------------------------------------------
 
-    public static String loesung(Instance in, Encoded enc, Direction dir, int nr) {
+    public static String loesung(Instance in, Encoded enc, Direction dir) {
         List<Field> fields = enc.fields();
         Mnemonic mn = in.mn();
         List<String> steps = new ArrayList<>();
         StringBuilder L = new StringBuilder();
 
         if (dir == Direction.ASM2BIN) {
-            L.append(f("\\subsection*{L\\\"osung zu Aufgabe %d: Assembler $\\rightarrow$ Maschinencode}%n", nr));
-            L.append(f("Gegeben: %s", Tex.asm(in, false, false)));
-            if (in.format().isPcRelative()) {
-                L.append(f(" an Adresse \\texttt{%s}, \\texttt{ziel} = \\texttt{%s}", Tex.hex8(in.pc()), Tex.hex8(in.target())));
-            }
-            L.append("\n");
-
             String s = f("\\textbf{Format bestimmen.} \\texttt{%s} ist ein %s: opcode = \\texttt{%s}",
                     mn.text(), in.format().longName(), Encoder.binary(mn.opcode(), 7));
             if (mn.hasFunct3()) {
@@ -92,13 +89,6 @@ public final class EncodingTex {
                             + "\\begin{center}%n%s\\\\[10pt]\\fbox{\\Large\\texttt{%s}}\\end{center}",
                     Tex.groupedBinary(fields), NibbleDiagram.render(enc.word()), enc.hex()));
         } else {
-            L.append(f("\\subsection*{L\\\"osung zu Aufgabe %d: Maschinencode $\\rightarrow$ Assembler}%n", nr));
-            L.append(f("Gegeben: \\texttt{%s}", enc.hex()));
-            if (in.format().isPcRelative()) {
-                L.append(f(" an Adresse \\texttt{%s}", Tex.hex8(in.pc())));
-            }
-            L.append("\n");
-
             steps.add("\\textbf{Hex $\\rightarrow$ bin\\\"ar.} Jede Hex-Ziffer entspricht 4 Bit:"
                     + "\\begin{center}\n" + NibbleDiagram.render(enc.word()) + "\\end{center}");
             String s = f("\\textbf{Format bestimmen.} Bits 6--0 (opcode) = \\texttt{%s} $\\rightarrow$ %s",
@@ -122,13 +112,13 @@ public final class EncodingTex {
             steps.add(res);
         }
 
-        L.append("\\begin{enumerate}\n");
+        L.append("\\begin{sloppypar}\n\\begin{enumerate}\n");
         for (String st : steps) {
             L.append("\\item ").append(st).append('\n');
         }
-        L.append("\\end{enumerate}\n");
+        L.append("\\end{enumerate}\n\\end{sloppypar}\n");
 
-        L.append("\\subsubsection*{Zuordnungsschema}\n");
+        L.append("\\par\\medskip\\textbf{Zuordnungsschema}\\par\\smallskip\n");
         L.append("\\fbox{\\parbox{0.97\\linewidth}{\\small\\textbf{Hinweis f\\\"ur Tutor:innen:} "
                 + "Nur bei Bedarf den Studierenden zeigen -- nicht Teil der Aufgabe.}}\\par\\smallskip\n");
         L.append("{\\small Gleiche Farbe = gleiche Herkunft. Pfeile zeigen, wohin die Bits wandern")

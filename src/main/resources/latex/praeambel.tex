@@ -1,0 +1,32 @@
+% ------------------------------------------------------------------
+% Gemeinsame Praeambel fuer main.tex (Aufgaben) und loesungen.tex.
+% Die \documentclass-Zeile steht in main.tex / loesungen.tex,
+% weil sie sich nur in solution=false/true unterscheidet.
+% ------------------------------------------------------------------
+\usepackage[english, main=ngerman]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[autostyle]{csquotes}
+\input{riscv}
+\usepackage{comment}
+\usepackage{enumitem}
+%\usepackage{todonotes}
+\usepackage[disable]{todonotes}
+\presetkeys{todonotes}{inline}{}
+\newcommand{\TODO}[1]{\todo[inline,color=orange]{TODO: #1}}
+\usepackage[T1]{fontenc}
+\geometry{margin=1.5cm}
+
+\ConfigureHeadline{
+    headline={title-name-id}
+}
+
+% Angaben fuer die Titelbox (Autor:innen, Semester, Kurztitel)
+\input{kopf}
+
+% Zusaetzliche Pakete, die die Aufgaben dieses Testats brauchen
+% (automatisch vom Generator erzeugt)
+\input{zusatz}
+
+% Nicht entfernen: \maketitle wird pro Matrikelnummer aufgerufen.
+% Die Kopie ist noetig, weil KOMA-Script \maketitle nach dem ersten Aufruf abschaltet.
+\let\BlattTitel\maketitle

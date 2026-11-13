@@ -142,11 +142,11 @@ public final class Main {
         for (String m : matrikel) {
             long seed = fixedSeeds.containsKey(m) ? fixedSeeds.get(m)
                     : key.map(k -> SeedDeriver.derive(k, testat.id(), m)).orElseGet(SeedDeriver::random);
-            Testat.Result r = testat.generate(seed);
-            entries.add(new DocumentBuilder.Entry(m, seed, r.aufgabe(), r.loesung()));
+            List<Exercise.Part> parts = testat.generate(seed);
+            entries.add(new DocumentBuilder.Entry(m, seed, parts));
             List<String> fragen = new ArrayList<>();
-            for (int i = 0; i < r.parts().size(); i++) {
-                Exercise.Part p = r.parts().get(i);
+            for (int i = 0; i < parts.size(); i++) {
+                Exercise.Part p = parts.get(i);
                 rows.add(new MappingRow(m, testat.id(), testat.describe(), seed, key.isPresent(),
                         (i + 1) + " " + testat.exercises().get(i).describe(), p.frage(), p.antwort()));
                 fragen.add(p.frage());
@@ -160,7 +160,7 @@ public final class Main {
         String name = baseName + "_" + testat.id() + "_" + stamp;
         Path zip = outDir.resolve(name + ".zip");
         Path csv = outDir.resolve(name + "_zuordnung.csv");
-        OutputWriter.writeZip(zip, DocumentBuilder.build(testat.title(), baseName, entries));
+        OutputWriter.writeZip(zip, DocumentBuilder.build(testat, baseName, entries));
         OutputWriter.writeMapping(csv, rows);
 
         System.out.println();

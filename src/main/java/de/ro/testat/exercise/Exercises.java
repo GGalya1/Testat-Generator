@@ -1,5 +1,10 @@
 package de.ro.testat.exercise;
 
+import de.ro.testat.exercise.control.AssemblerToC;
+import de.ro.testat.exercise.control.CToAssembler;
+import de.ro.testat.exercise.cpu.MulticycleFsm;
+import de.ro.testat.exercise.cpu.PipelineHazards;
+import de.ro.testat.exercise.cpu.SingleCycleTiming;
 import de.ro.testat.exercise.encoding.AsmToMachineCode;
 import de.ro.testat.exercise.encoding.MachineCodeToAsm;
 
@@ -24,10 +29,34 @@ public final class Exercises {
     static {
         register("asm2bin", "Assembler -> Maschinencode, Parameter: Befehlsauswahl (z. B. B,J)", AsmToMachineCode::new);
         register("bin2asm", "Maschinencode -> Assembler, Parameter: Befehlsauswahl (z. B. R,I)", MachineCodeToAsm::new);
-        // register("c2asm", "C -> RISC-V", CToAssembler::new);
+        register("c2asm", "C -> RISC-V, Parameter: Form[/Fragen], z. B. if, schleife, while,for oder if-else/1",
+                arg -> new CToAssembler(form(arg), fragen(arg)));
+        register("asm2c", "RISC-V -> C, Parameter wie c2asm", arg -> new AssemblerToC(form(arg), fragen(arg)));
+        register("eintakt", "Eintakt-Prozessor: Takte, kritischer Pfad, Tc, Gesamtzeit (ohne Parameter)", arg -> new SingleCycleTiming());
+        register("mehrtakt", "Mehrtakt-Steuerwerk erweitern, Parameter: Befehle/Klassen (z. B. sw,beq,mul oder R,I)", MulticycleFsm::new);
+        register("hazards", "Pipeline: RAW, nops, Forwarding/Stalls, Umordnung (ohne Parameter)", arg -> new PipelineHazards());
     }
 
     private Exercises() {
+    }
+
+    /** "while,for/1" -> "while,for" */
+    private static String form(String arg) {
+        int i = arg.indexOf('/');
+        return i < 0 ? arg : arg.substring(0, i);
+    }
+
+    /** "while,for/1" -> 1, ohne Angabe 2 */
+    private static int fragen(String arg) {
+        int i = arg.indexOf('/');
+        if (i < 0) {
+            return 2;
+        }
+        try {
+            return Integer.parseInt(arg.substring(i + 1).trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Anzahl Zusatzfragen ist keine Zahl: " + arg);
+        }
     }
 
     public static void register(String id, String help, Function<String, Exercise> factory) {

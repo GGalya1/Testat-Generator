@@ -1,5 +1,10 @@
 package de.ro.testat.testat;
 
+import de.ro.testat.exercise.control.AssemblerToC;
+import de.ro.testat.exercise.control.CToAssembler;
+import de.ro.testat.exercise.cpu.MulticycleFsm;
+import de.ro.testat.exercise.cpu.PipelineHazards;
+import de.ro.testat.exercise.cpu.SingleCycleTiming;
 import de.ro.testat.exercise.encoding.AsmToMachineCode;
 import de.ro.testat.exercise.encoding.MachineCodeToAsm;
 
@@ -46,11 +51,30 @@ public final class Templates {
                 .add(new MachineCodeToAsm("Load"))
                 .build());
 
-        // Weitere Testate, sobald die Aufgabentypen existieren, z. B.:
-        // register("c-nach-asm", () -> Testat.builder("c-nach-asm", "C nach RISC-V")
-        //         .add(new CToAssembler("schleife"))
-        //         .add(new AssemblerToC())
-        //         .build());
+        // Wie im Beispieltestat: C -> RISC-V und RISC-V -> C, beliebige Kontrollstruktur
+        register("kontrollstrukturen", () -> Testat.builder("kontrollstrukturen", "Kontrollstrukturen")
+                .add(new CToAssembler())
+                .add(new AssemblerToC())
+                .build());
+
+        // Nur Verzweigungen (if-if, if / else if / else, if-else)
+        register("verzweigungen", () -> Testat.builder("verzweigungen", "Verzweigungen")
+                .add(new CToAssembler("if"))
+                .add(new AssemblerToC("if"))
+                .build());
+
+        // Nur Schleifen (while, for, do-while)
+        register("schleifen", () -> Testat.builder("schleifen", "Schleifen")
+                .add(new CToAssembler("schleife"))
+                .add(new AssemblerToC("schleife"))
+                .build());
+
+        // Prozessor (wie das bisherige Testat 2): Eintakt-Timing, Mehrtakt-FSM, Pipeline-Konflikte
+        register("prozessor", () -> Testat.builder("prozessor", "Prozessor")
+                .add(new SingleCycleTiming())
+                .add(new MulticycleFsm())
+                .add(new PipelineHazards())
+                .build());
     }
 
     private Templates() {
