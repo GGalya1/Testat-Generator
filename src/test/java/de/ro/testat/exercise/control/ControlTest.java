@@ -82,31 +82,15 @@ class ControlTest {
     }
 
     @Test
-    void exercisesGenerateWithQuestionsAndAreDeterministic() {
-        Map<String, Integer> questionUse = new HashMap<>();
+    void exercisesAreDeterministicAndHaveNoExtraQuestions() {
         for (Exercise e : List.of(new CToAssembler(), new AssemblerToC())) {
             for (long seed = 0; seed < 400; seed++) {
                 Exercise.Part a = e.generate(new Random(seed));
                 assertEquals(a, e.generate(new Random(seed)), "gleicher Seed, gleiche Aufgabe");
-                assertTrue(a.aufgabe().contains("Zusatzfragen:"));
+                assertTrue(!a.aufgabe().contains("Zusatzfrage"), "nur die Aufgabe selbst, keine Zusatzfragen");
                 assertTrue(a.loesung().contains("Kontrollwerte"));
-                for (String id : a.frage().substring(a.frage().indexOf("Fragen: ") + 8).split(",")) {
-                    questionUse.merge(e.id() + ":" + id, 1, Integer::sum);
-                }
             }
         }
-        // jede Frage, die zu einer Richtung passt, kommt auch vor
-        Set<String> expected = new HashSet<>();
-        for (Questions.Q q : Questions.Q.values()) {
-            if (q != Questions.Q.SCHLEIFENART) {
-                expected.add("c2asm:" + q.name());
-            }
-            if (q != Questions.Q.OPERANDEN && q != Questions.Q.SICHERN) {
-                expected.add("asm2c:" + q.name());
-            }
-        }
-        expected.removeAll(questionUse.keySet());
-        assertTrue(expected.isEmpty(), "nie gezogen: " + expected);
     }
 
     @Test

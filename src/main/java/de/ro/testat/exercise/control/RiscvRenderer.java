@@ -118,20 +118,6 @@ public final class RiscvRenderer {
         return r.finish(save);
     }
 
-    /** Sprungbefehl "springe nach label, wenn e gilt" - ohne etwas auszugeben (fuer Fragen). */
-    public static String branchText(Cond e, Map<String, String> regs, String scratch, String label) {
-        String l = regs.get(e.left().name());
-        String r = operandName(e.right(), regs, scratch);
-        return switch (e.op()) {
-            case EQ -> "beq " + l + ", " + r + ", " + label;
-            case NE -> "bne " + l + ", " + r + ", " + label;
-            case LT -> "blt " + l + ", " + r + ", " + label;
-            case GE -> "bge " + l + ", " + r + ", " + label;
-            case GT -> "blt " + r + ", " + l + ", " + label;
-            case LE -> "bge " + r + ", " + l + ", " + label;
-        };
-    }
-
     static String mnemonic(RelOp op) {
         return switch (op) {
             case EQ -> "beq";

@@ -114,7 +114,7 @@ public final class SingleCycleTiming implements Exercise {
         a.append("\\item Wie viele Taktzyklen ben\\\"otigt die Ausf\\\"uhrung auf dem Eintakt-Prozessor?\n");
         a.append("\\item Welche Komponenten durchl\\\"auft die Instruktion \\texttt{").append(asked.text())
                 .append("}? Wie lange dauert sie?\n");
-        a.append("\\item Bestimmen Sie die Taktperiode $T_c$ des Eintakt-Prozessors. Welche Instruktion legt sie fest, und warum?\n");
+        a.append("\\item Bestimmen Sie die Taktperiode $T_c$ des Eintakt-Prozessors.\n");
         a.append("\\item Berechnen Sie die Gesamtausf\\\"uhrungszeit des Programms in Pikosekunden (ps).\n");
         a.append("\\end{enumerate}\n");
 

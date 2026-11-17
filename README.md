@@ -4,7 +4,7 @@ Erzeugt aus einer Liste von Matrikelnummern individuelle Testat-Aufgaben samt L�
 als ShareLaTeX-Projekt (Zip). Ein Blatt besteht aus einer frei kombinierbaren Kette von Aufgaben; fertige Ketten
 liegen als Vorlagen bereit. Aktuelle Aufgabentypen: Befehlskodierung (RISC-V RV32I,
 Assembler → Maschinencode und zurück), Kontrollstrukturen (C → RISC-V, RISC-V → C)
-mit zufälligen Zusatzfragen und Prozessor (Eintakt-Timing, Mehrtakt-Steuerwerk, Pipeline-Konflikte).
+und Prozessor (Eintakt-Timing, Mehrtakt-Steuerwerk, Pipeline-Konflikte).
 
 ## Für Tutor:innen
 
@@ -61,6 +61,7 @@ java -jar testat-generator.jar gruppe_A.werk --vorlage spruenge
 | `verzweigungen` | c2asm(if), asm2c(if) |
 | `schleifen` | c2asm(schleife), asm2c(schleife) |
 | `prozessor` | eintakt, mehrtakt(zufall), hazards |
+| `prozessor-neu` | eintakt, mehrtakt-neu(zufall), hazards |
 
 Eigene Kette ohne Programmieren (Reihenfolge = Reihenfolge auf dem Blatt):
 
@@ -72,12 +73,12 @@ Befehlsauswahl nach dem Doppelpunkt: `R`, `I`, `Shift`, `Load`, `jalr`, `S`, `B`
 ein Befehl (`beq`) oder eine Liste (`B,J,S`); ohne Angabe beliebig.
 
 Für `c2asm`/`asm2c`: Form nach dem Doppelpunkt (`if`, `schleife`, `if-if`, `if-elseif`,
-`if-else`, `while`, `for`, `do-while` oder Liste), optional `/n` für die Anzahl der
-Zusatzfragen (Standard 2), z. B. `c2asm:while,for/1`.
+`if-else`, `while`, `for`, `do-while` oder Liste), z. B. `c2asm:while,for`.
 
 Für `mehrtakt`: zu ergänzender Befehl (`sw`, `add`, `sub`, `and`, `or`, `mul`, `addi`, `andi`,
-`ori`, `beq`, `jal`) oder Klasse (`R`, `I`), z. B. `mehrtakt:sw,beq`. `eintakt` und `hazards`
-haben keine Parameter.
+`ori`, `beq`, `jal`) oder Klasse (`R`, `I`), z. B. `mehrtakt:sw,beq`. Für `mehrtakt-neu`: Befehle
+aus dem Katalog (`jalr`, `auipc`, `lwr`, `lwpc`, `swpc`, `lwi`, `swi`, `jrr`, `jalrr`, `jm`, `jalm`,
+`jmpc`), z. B. `mehrtakt-neu:jalm,lwi`. `eintakt` und `hazards` haben keine Parameter.
 
 ### Optionen
 
@@ -108,8 +109,8 @@ de.ro.testat
 ├── testat/               Testat (Builder fuer die Aufgabenkette), Templates (Vorlagen)
 ├── exercise/             Exercise-Interface, Exercises (Verzeichnis fuer --aufgaben)
 │   ├── encoding/         AsmToMachineCode, MachineCodeToAsm + LaTeX dazu
-│   ├── control/          CToAssembler, AssemblerToC, Generator, Interpreter, Simulator, Fragen
-│   └── cpu/              SingleCycleTiming, MulticycleFsm, PipelineHazards
+│   ├── control/          CToAssembler, AssemblerToC, Generator, Interpreter, Simulator
+│   └── cpu/              SingleCycleTiming, MulticycleFsm, NewInstructionFsm, Datapath, PipelineHazards
 ├── rv/                   RISC-V: Formate, Befehle, Kodierung, Zufallsoperanden
 ├── latex/                LaTeX-Hilfen, TikZ-Schemata, Projektaufbau (DocumentBuilder)
 └── io/                   .werk-Datei, Seeds, Zip + Zuordnung
@@ -176,18 +177,15 @@ ProgramGenerator ──► Program (AST) ──► Interpreter ──► Endwert
 - Variablennamen, Register, Vergleichsoperatoren, Konstanten und Übersetzungsschema
   (Prüfung oben/unten, Sprung bei wahr/falsch) sind zufällig. Marken heißen `L1`, `L2`, …
 - C → RISC-V: Die Musterlösung sichert ein benötigtes Hilfsregister auf dem Stack.
-- Zusatzfragen (`Questions.Q`): Bedingung tauschen, Schleifenart, Umbau while ↔ do-while,
-  `mul` durch Shifts ersetzen, Endwerte, Anzahl Durchläufe, anderer Startwert (inkl.
-  Endlosschleife), Pseudobefehle, `bgt`/`ble` ohne eigenen Befehl, Register sichern,
-  ausgeführter Zweig. Pro Aufgabe werden passende Fragen zufällig gezogen; die Antworten
-  berechnet der Generator. Neue Frage: Konstante in `Questions.Q` ergänzen.
+- Die Aufgaben bestehen nur aus der Aufgabenstellung; es gibt keine Zusatz- oder Theoriefragen.
 
 ### Prozessor (`exercise.cpu`)
 
 | Aufgabe | Zufällig | Gefragt |
 |---|---|---|
-| `eintakt` – Rechenleistung und kritischer Pfad | Programm (3–5 Befehle, in ~40 % ohne `lw`), Verzögerungszeiten | Takte, Pfad eines Befehls, Tc und warum, Gesamtzeit |
-| `mehrtakt` – Erweiterung des Steuerwerks | gegebene FSM (`lw`, evtl. + eine Klasse), zu ergänzender Befehl | Typ/Opcode, neue Zustände + Übergänge, Steuersignale, Takte |
+| `eintakt` – Rechenleistung und kritischer Pfad | Programm (3–5 Befehle, in ~40 % ohne `lw`), Verzögerungszeiten | Takte, Pfad eines Befehls, Tc, Gesamtzeit |
+| `mehrtakt` – Erweiterung des Steuerwerks | gegebene FSM (`lw`, evtl. + eine Klasse), zu ergänzender Befehl | neue Zustände + Übergänge, Steuersignale, Takte |
+| `mehrtakt-neu` – Neuer Befehl im Mehrtakt-Steuerwerk | Befehl aus dem Katalog (meist ausgedacht, custom-Opcode), gegeben nur Fetch/Decode oder zusätzlich `lw` | neue Zustände + Übergänge, Steuersignale, Takte (minimal) |
 | `hazards` – Datenkonflikte in der Pipeline | Programm aus 5–6 Befehlen ohne Sprünge | RAW-Abhängigkeiten, minimale `nop`s ohne Forwarding, Stalls + Pipeline-Diagramm mit Forwarding, Umordnung ohne Stall |
 
 Modell (bitte mit der Vorlesung abgleichen, Änderungen jeweils an einer Stelle):
@@ -199,6 +197,17 @@ Modell (bitte mit der Vorlesung abgleichen, Änderungen jeweils an einer Stelle)
 - **Mehrtakt** (`MulticycleFsm.State`): Zustände S0–S10 und Steuersignale wie im Harris &
   Harris (RISC-V Edition). Die FSM wird als TikZ gezeichnet, neue Teile in der Lösung farbig.
   Das Schaltbild des Mehrtakt-Prozessors ist **nicht** enthalten (bei Bedarf als Bild ergänzen).
+- **Neuer Befehl** (`NewInstructionFsm`, `Datapath`): Die Lösung wird berechnet, nicht
+  nachgeschlagen. `Datapath` modelliert den Mehrtakt-Datenpfad symbolisch (pro Takt eine
+  ALU-Operation, ein Speicherzugriff, ein Registerschreibzugriff; ALU-Ergebnis im selben Takt nur in
+  den PC, sonst über ALUOut) und sucht die kürzeste Steuerfolge für die Wirkung des Befehls.
+  Vorhandene Zustände werden wiederverwendet, wenn Signale und Nachfolger passen; Zustände mit
+  den Signalen eines Vorlesungszustands (S2, S3, S4, S5, S7) behalten dessen Namen, sonst S11, S12, …
+  Kontrolle: Das Modell findet für lw/sw/jal/add/addi genau die Taktzahlen der Vorlesung, und jede
+  Lösung wird mit konkreten Zahlen simuliert (unbenutzte Signale = Zufall). Neuer Befehl: Eintrag in
+  `NewInstructionFsm.CATALOG` mit seiner Wirkung, z. B. `new Goal("pc+4", "M[rs1+imm]", null, null)`
+  für `rd ← PC+4; PC ← Mem[rs1+imm]`. Nicht umsetzbare Befehle (z. B. zwei Registerschreibzugriffe)
+  findet die Suche nicht und sie werden verworfen.
 - **Pipeline** (`PipelineHazards`): Registerfeld schreibt in der ersten, liest in der zweiten
   Takthälfte (ohne Forwarding: Abstand ≥ 3). Forwarding in die EX-Stufe; Stall nur bei `lw`
   mit direkt folgendem Verbraucher (auch `sw`). Der Generator nimmt nur Programme mit

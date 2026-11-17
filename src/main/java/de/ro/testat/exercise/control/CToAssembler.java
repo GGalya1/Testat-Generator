@@ -7,9 +7,8 @@ import java.util.stream.Collectors;
  * "Uebersetzung in RISC-V": C-Programm gegeben, Assembler gesucht.
  *
  * <pre>
- *   new CToAssembler()               // beliebige Form, 2 Zusatzfragen
+ *   new CToAssembler()               // beliebige Form
  *   new CToAssembler("if")           // nur Verzweigungen
- *   new CToAssembler("while,for", 1) // nur diese Schleifen, 1 Zusatzfrage
  * </pre>
  */
 public final class CToAssembler extends ControlExercise {
@@ -19,11 +18,7 @@ public final class CToAssembler extends ControlExercise {
     }
 
     public CToAssembler(String auswahl) {
-        this(auswahl, 2);
-    }
-
-    public CToAssembler(String auswahl, int fragen) {
-        super(auswahl, fragen);
+        super(auswahl);
     }
 
     @Override
@@ -33,7 +28,7 @@ public final class CToAssembler extends ControlExercise {
 
     @Override
     public Part generate(Random rng) {
-        Generated g = build(rng, true, Questions.Mode.C2ASM);
+        Generated g = build(rng, true);
         String zuordnung = g.program().vars().stream()
                 .map(v -> "\\texttt{" + v.name() + "} in \\texttt{" + g.regs().get(v.name()) + "}")
                 .collect(Collectors.joining(", "));
@@ -46,8 +41,7 @@ public final class CToAssembler extends ControlExercise {
                 + zuordnung + ".\\\\\n"
                 + "Wenn Sie weitere Register verwenden, m\\\"ussen Sie den urspr\\\"unglichen Wert wiederherstellen.\n"
                 + cListing(g.program())
-                + "\\textbf{Hinweis:} Die \\textbf{M-Extension} (f\\\"ur Multiplikation) ist verf\\\"ugbar und darf verwendet werden.\n"
-                + fragenAufgabe(g.fragen());
+                + "\\textbf{Hinweis:} Die \\textbf{M-Extension} (f\\\"ur Multiplikation) ist verf\\\"ugbar und darf verwendet werden.\n";
 
         StringBuilder l = new StringBuilder();
         l.append("Musterl\\\"osung (andere korrekte L\\\"osungen sind m\\\"oglich):\n");
@@ -74,10 +68,8 @@ public final class CToAssembler extends ControlExercise {
         }
         l.append("\\item Am Ende stehen die Kontrollwerte in den vorgegebenen Registern\n");
         l.append("\\end{itemize}\n");
-        l.append(fragenLoesung(g.fragen()));
 
-        String frage = g.shape().id() + ": " + CRenderer.oneLine(g.program())
-                + (g.fragen().isEmpty() ? "" : " | Fragen: " + fragenIds(g));
+        String frage = g.shape().id() + ": " + CRenderer.oneLine(g.program());
         return new Part("\\\"Ubersetzung in RISC-V", aufgabe, l.toString(), frage, kurzWerte(g));
     }
 }

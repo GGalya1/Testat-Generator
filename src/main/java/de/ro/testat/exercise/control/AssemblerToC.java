@@ -7,9 +7,8 @@ import java.util.stream.Collectors;
  * "RISC-V zu Hochsprache": Assembler gegeben (mit Zeilennummern), C gesucht.
  *
  * <pre>
- *   new AssemblerToC()                 // beliebige Form, 2 Zusatzfragen
+ *   new AssemblerToC()                 // beliebige Form
  *   new AssemblerToC("schleife")       // nur Schleifen
- *   new AssemblerToC("if-else", 1)
  * </pre>
  */
 public final class AssemblerToC extends ControlExercise {
@@ -19,11 +18,7 @@ public final class AssemblerToC extends ControlExercise {
     }
 
     public AssemblerToC(String auswahl) {
-        this(auswahl, 2);
-    }
-
-    public AssemblerToC(String auswahl, int fragen) {
-        super(auswahl, fragen);
+        super(auswahl);
     }
 
     @Override
@@ -33,12 +28,11 @@ public final class AssemblerToC extends ControlExercise {
 
     @Override
     public Part generate(Random rng) {
-        Generated g = build(rng, false, Questions.Mode.ASM2C);
+        Generated g = build(rng, false);
 
         String aufgabe = "\\\"Ubersetzen Sie den folgenden RISC-V-Assemblercode in C. "
                 + "Sie d\\\"urfen Variablennamen frei w\\\"ahlen.\n"
-                + asmListing(g.asm())
-                + fragenAufgabe(g.fragen());
+                + asmListing(g.asm());
 
         String zuordnung = g.program().vars().stream()
                 .map(v -> "\\texttt{" + g.regs().get(v.name()) + "} $\\rightarrow$ \\texttt{" + v.name() + "}")
@@ -56,10 +50,8 @@ public final class AssemblerToC extends ControlExercise {
             l.append(" (z.\\,B. while statt for)");
         }
         l.append(".\n");
-        l.append(fragenLoesung(g.fragen()));
 
-        String frage = g.shape().id() + ": " + CRenderer.oneLine(g.program())
-                + (g.fragen().isEmpty() ? "" : " | Fragen: " + fragenIds(g));
+        String frage = g.shape().id() + ": " + CRenderer.oneLine(g.program());
         return new Part("RISC-V zu Hochsprache", aufgabe, l.toString(), frage, kurzWerte(g));
     }
 }

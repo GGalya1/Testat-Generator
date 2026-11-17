@@ -3,6 +3,7 @@ package de.ro.testat.testat;
 import de.ro.testat.exercise.control.AssemblerToC;
 import de.ro.testat.exercise.control.CToAssembler;
 import de.ro.testat.exercise.cpu.MulticycleFsm;
+import de.ro.testat.exercise.cpu.NewInstructionFsm;
 import de.ro.testat.exercise.cpu.PipelineHazards;
 import de.ro.testat.exercise.cpu.SingleCycleTiming;
 import de.ro.testat.exercise.encoding.AsmToMachineCode;
@@ -73,6 +74,13 @@ public final class Templates {
         register("prozessor", () -> Testat.builder("prozessor", "Prozessor")
                 .add(new SingleCycleTiming())
                 .add(new MulticycleFsm())
+                .add(new PipelineHazards())
+                .build());
+
+        // Variante: statt "Befehl aus der Vorlesung ergaenzen" einen neuen (ausgedachten) Befehl einbauen
+        register("prozessor-neu", () -> Testat.builder("prozessor-neu", "Prozessor")
+                .add(new SingleCycleTiming())
+                .add(new NewInstructionFsm())
                 .add(new PipelineHazards())
                 .build());
     }

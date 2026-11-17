@@ -24,17 +24,17 @@ public final class MulticycleFsm implements Exercise {
 
     /** Zustand mit Steuersignalen und Position im Diagramm (cm). */
     enum State {
-        S0("Fetch", -4, 0, "AdrSrc = 0", "IRWrite", "ALUSrcA = 00", "ALUSrcB = 10", "ALUOp = 00", "ResultSrc = 10", "PCUpdate"),
-        S1("Decode", 0, 0, "ALUSrcA = 01", "ALUSrcB = 01", "ALUOp = 00"),
-        S2("MemAdr", -5.6, -3.6, "ALUSrcA = 10", "ALUSrcB = 01", "ALUOp = 00"),
-        S3("MemRead", -7, -6.8, "ResultSrc = 00", "AdrSrc = 1"),
-        S4("MemWB", -7, -9.6, "ResultSrc = 01", "RegWrite"),
-        S5("MemWrite", -4.2, -6.8, "ResultSrc = 00", "AdrSrc = 1", "MemWrite"),
-        S6("ExecuteR", -2.8, -3.6, "ALUSrcA = 10", "ALUSrcB = 00", "ALUOp = 10"),
-        S7("ALUWB", -1.4, -6.8, "ResultSrc = 00", "RegWrite"),
-        S8("ExecuteI", 0, -3.6, "ALUSrcA = 10", "ALUSrcB = 01", "ALUOp = 10"),
-        S9("JAL", 2.8, -3.6, "ALUSrcA = 01", "ALUSrcB = 10", "ALUOp = 00", "ResultSrc = 00", "PCUpdate"),
-        S10("BEQ", 5.6, -3.6, "ALUSrcA = 10", "ALUSrcB = 00", "ALUOp = 01", "ResultSrc = 00", "Branch");
+        S0("Fetch", 0, 0, "AdrSrc = 0", "IRWrite", "ALUSrcA = 00", "ALUSrcB = 10", "ALUOp = 00", "ResultSrc = 10", "PCUpdate"),
+        S1("Decode", 4, 0, "ALUSrcA = 01", "ALUSrcB = 01", "ALUOp = 00"),
+        S2("MemAdr", -2.2, -4.8, "ALUSrcA = 10", "ALUSrcB = 01", "ALUOp = 00"),
+        S3("MemRead", -2.2, -8.6, "ResultSrc = 00", "AdrSrc = 1"),
+        S4("MemWB", -2.2, -12.2, "ResultSrc = 01", "RegWrite"),
+        S5("MemWrite", 1.6, -8.6, "ResultSrc = 00", "AdrSrc = 1", "MemWrite"),
+        S6("ExecuteR", 1.4, -4.8, "ALUSrcA = 10", "ALUSrcB = 00", "ALUOp = 10"),
+        S7("ALUWB", 5.6, -8.6, "ResultSrc = 00", "RegWrite"),
+        S8("ExecuteI", 4.6, -4.8, "ALUSrcA = 10", "ALUSrcB = 01", "ALUOp = 10"),
+        S9("JAL", 8.0, -4.8, "ALUSrcA = 01", "ALUSrcB = 10", "ALUOp = 00", "ResultSrc = 00", "PCUpdate"),
+        S10("BEQ", 11.8, -4.8, "ALUSrcA = 10", "ALUSrcB = 00", "ALUOp = 01", "ResultSrc = 00", "Branch");
 
         final String title;
         final double x;
@@ -157,7 +157,8 @@ public final class MulticycleFsm implements Exercise {
     @Override
     public List<String> preamble() {
         return List.of("\\usepackage{tikz}", "\\usetikzlibrary{arrows.meta}",
-                "\\definecolor{fsmNeu}{HTML}{C2410C}   % neue Zustaende/Uebergaenge im Mehrtakt-Steuerwerk");
+                "\\definecolor{fsmName}{RGB}{0,0,230}   % Zustandsnamen im Mehrtakt-Steuerwerk",
+                "\\definecolor{fsmNeu}{HTML}{C2410C}    % neue Zustaende/Uebergaenge in der Loesung");
     }
 
     @Override
@@ -186,23 +187,22 @@ public final class MulticycleFsm implements Exercise {
             a.append(" Nehmen Sie an, dass die ALU bereits Multiplikation unterst\\\"utzt.");
         }
         a.append("\n\\begin{enumerate}[label=\\alph*)]\n");
-        a.append("\\item Um welchen Instruktionstyp handelt es sich, und an welchem Opcode erkennt das Steuerwerk ihn?\n");
         a.append("\\item Erg\\\"anzen Sie den Zustandsautomaten um die n\\\"otigen Zust\\\"ande und \\\"Uberg\\\"ange.\n");
-        a.append("\\item Geben Sie f\\\"ur jeden neuen Zustand die Steuersignale an und erkl\\\"aren Sie deren Bedeutung. "
+        a.append("\\item Geben Sie f\\\"ur jeden neuen Zustand die Steuersignale an. "
                 + "Wie viele Takte ben\\\"otigt \\texttt{").append(t.mnemonic()).append("}?\n");
         a.append("\\end{enumerate}\n");
 
         // ---------------- Loesung
         StringBuilder l = new StringBuilder();
         l.append("\\begin{enumerate}[label=\\alph*)]\n");
-        l.append("\\item ").append(typeAnswer(t)).append("\n");
         l.append("\\item ");
         if (neu.isEmpty()) {
             l.append("Keine neuen Zust\\\"ande -- ");
         } else {
             l.append("Neu: ").append(neu.stream().map(s -> s.name() + " (" + s.title + ")").collect(Collectors.joining(", "))).append(". ");
         }
-        l.append(transitionsAnswer(t, given)).append(" Neue Teile sind farbig markiert:\n");
+        l.append(transitionsAnswer(t, given)).append(" Erkennung im Steuerwerk: ").append(typeAnswer(t))
+                .append(" Neue Teile sind farbig markiert:\n");
         l.append("\\begin{center}\n").append(diagram(after, Set.of(t.kind()))).append("\\end{center}\n");
         l.append("\\item ").append(signalsAnswer(t, neu)).append("\n");
         l.append("\\end{enumerate}\n");
@@ -292,8 +292,23 @@ public final class MulticycleFsm implements Exercise {
     // TikZ
     // ------------------------------------------------------------------
 
-    /** Kante mit Bedingung. */
-    record Edge(State from, State to, String label, Kind owner) {
+    /** Beginn eines Zustandsdiagramms im Stil der Vorlesung (auch fuer {@link NewInstructionFsm}). */
+    static final String TIKZ_OPEN = "\\begin{tikzpicture}[scale=0.8, every node/.style={transform shape},\n"
+            + "  state/.style={circle, draw, thick, minimum size=2.5cm, inner sep=1pt, align=center, font=\\scriptsize\\sffamily},\n"
+            + "  neu/.style={draw=fsmNeu, fill=fsmNeu!6, very thick},\n"
+            + "  tr/.style={-{Latex[length=2.5mm]}, semithick},\n"
+            + "  trNeu/.style={-{Latex[length=2.5mm]}, fsmNeu, very thick},\n"
+            + "  lbl/.style={font=\\footnotesize\\sffamily\\bfseries, align=center}]\n";
+
+    /** Zustand als Kreis: Name farbig, darunter die Steuersignale. */
+    static String stateNode(String id, String title, double x, double y, List<String> signals, boolean isNew) {
+        return String.format(Locale.ROOT,
+                "\\node[state%s] (%s) at (%.1f,%.1f) {{\\color{%s}\\small\\bfseries %s: %s}\\\\%s};%n",
+                isNew ? ",neu" : "", id, x, y, isNew ? "fsmNeu" : "fsmName", id, title, String.join("\\\\", signals));
+    }
+
+    /** Kante mit Bedingung (null = ohne) und Lage der Beschriftung (TikZ-Optionen). */
+    record Edge(State from, State to, String label, String place) {
     }
 
     static List<Edge> edges(List<Kind> kinds) {
@@ -301,75 +316,77 @@ public final class MulticycleFsm implements Exercise {
         e.add(new Edge(State.S0, State.S1, null, null));
         boolean lw = kinds.contains(Kind.LW), sw = kinds.contains(Kind.SW);
         if (lw || sw) {
-            String lab = lw && sw ? "op = \\texttt{0000011} (lw)\\\\oder \\texttt{0100011} (sw)"
-                    : lw ? "op = \\texttt{0000011} (lw)" : "op = \\texttt{0100011} (sw)";
-            e.add(new Edge(State.S1, State.S2, lab, sw ? Kind.SW : Kind.LW));
+            String lab = lw && sw ? "op = 0000011 (\\texttt{lw})\\\\OR\\\\op = 0100011 (\\texttt{sw})"
+                    : lw ? "op = 0000011 (\\texttt{lw})" : "op = 0100011 (\\texttt{sw})";
+            e.add(new Edge(State.S1, State.S2, lab, lw && sw ? "pos=0.62, above left=-1pt" : "pos=0.6, above left=-1pt"));
         }
         if (lw) {
-            e.add(new Edge(State.S2, State.S3, sw ? "lw" : null, Kind.LW));
-            e.add(new Edge(State.S3, State.S4, null, Kind.LW));
+            e.add(new Edge(State.S2, State.S3, "op =\\\\0000011\\\\(\\texttt{lw})", "midway, left"));
+            e.add(new Edge(State.S3, State.S4, null, null));
         }
         if (sw) {
-            e.add(new Edge(State.S2, State.S5, "sw", Kind.SW));
+            e.add(new Edge(State.S2, State.S5, "op =\\\\0100011\\\\(\\texttt{sw})", "midway, right=2pt"));
         }
         if (kinds.contains(Kind.R)) {
-            e.add(new Edge(State.S1, State.S6, "R-Typ\\\\\\texttt{0110011}", Kind.R));
-            e.add(new Edge(State.S6, State.S7, null, Kind.R));
+            e.add(new Edge(State.S1, State.S6, "op =\\\\0110011\\\\(R-type)", "pos=0.5, left=3pt"));
+            e.add(new Edge(State.S6, State.S7, null, null));
         }
         if (kinds.contains(Kind.I)) {
-            e.add(new Edge(State.S1, State.S8, "I-Typ\\\\\\texttt{0010011}", Kind.I));
-            e.add(new Edge(State.S8, State.S7, null, Kind.I));
+            e.add(new Edge(State.S1, State.S8, "op =\\\\0010011\\\\(I-type ALU)", "pos=0.68, right=2pt"));
+            e.add(new Edge(State.S8, State.S7, null, null));
         }
         if (kinds.contains(Kind.JAL)) {
-            e.add(new Edge(State.S1, State.S9, "jal\\\\\\texttt{1101111}", Kind.JAL));
-            e.add(new Edge(State.S9, State.S7, null, Kind.JAL));
+            e.add(new Edge(State.S1, State.S9, "op =\\\\1101111\\\\(\\texttt{jal})", "pos=0.6, right=4pt"));
+            e.add(new Edge(State.S9, State.S7, null, null));
         }
         if (kinds.contains(Kind.BEQ)) {
-            e.add(new Edge(State.S1, State.S10, "beq\\\\\\texttt{1100011}", Kind.BEQ));
+            e.add(new Edge(State.S1, State.S10, "op =\\\\1100011\\\\(\\texttt{beq})", "pos=0.62, above right=-1pt"));
         }
         return e;
     }
 
-    /** Zustandsdiagramm; Zustaende/Kanten der Klassen in highlight werden farbig, sofern sie neu sind. */
+    /**
+     * Zustandsdiagramm im Stil der Vorlesung (Harris &amp; Harris): Kreise, Zustandsname blau,
+     * Rueckkehr zu S0 ueber eine gemeinsame Linie unten. Zustaende/Kanten der Klassen in
+     * highlight werden farbig, sofern sie neu sind.
+     */
     static String diagram(List<Kind> kinds, Set<Kind> highlight) {
         List<Kind> base = kinds.stream().filter(k -> !highlight.contains(k)).toList();
         Set<State> baseStates = states(base);
         Set<State> all = states(kinds);
-        Set<String> baseEdges = edges(base).stream().map(Edge::toString).collect(Collectors.toSet());
+        Set<Edge> baseEdges = Set.copyOf(edges(base));
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\\begin{tikzpicture}[>={Stealth[length=2.2mm]}, font=\\scriptsize,\n"
-                + "  st/.style={draw, rounded corners=3pt, align=center, inner sep=3pt, fill=white, thick},\n"
-                + "  neu/.style={draw=fsmNeu, fill=fsmNeu!8, very thick},\n"
-                + "  lab/.style={fill=white, inner sep=1pt, align=center, font=\\tiny}]\n");
+        sb.append(TIKZ_OPEN);
         for (State s : all) {
             boolean isNew = !baseStates.contains(s);
-            sb.append(String.format(Locale.ROOT, "\\node[st%s] (%s) at (%.2f,%.2f) {\\textbf{%s: %s}\\\\%s};%n",
-                    isNew ? ",neu" : "", s.name(), s.x, s.y, s.name(), s.title, String.join("\\\\", s.signals)));
+            sb.append(stateNode(s.name(), s.title, s.x, s.y, s.signals, isNew));
         }
-        // feste Bounding Box: Aufgabe und Loesung gleich gross, unabhaengig von den vorhandenen Zustaenden
-        sb.append("\\useasboundingbox (-8.6,1.6) rectangle (7.0,-11.2);\n");
-        sb.append("\\draw[<-, thick] (S0.west) -- ++(-0.9,0) node[left] {Reset};\n");
+        sb.append("\\node[font=\\small\\sffamily] (reset) at (-2.2,1.9) {Reset};\n");
+        sb.append("\\draw[tr] (reset) -- (S0.north west);\n");
         for (Edge e : edges(kinds)) {
-            boolean isNew = !baseEdges.contains(e.toString());
-            String col = isNew ? "fsmNeu, very thick" : "thick";
-            String lc = isNew ? ", text=fsmNeu" : "";
-            if (e.label() == null) {
-                sb.append(String.format("\\draw[->, %s] (%s) -- (%s);%n", col, e.from().name(), e.to().name()));
-            } else {
-                sb.append(String.format("\\draw[->, %s] (%s) -- node[lab%s, pos=0.62] {%s} (%s);%n",
-                        col, e.from().name(), lc, e.label(), e.to().name()));
+            boolean isNew = !baseEdges.contains(e);
+            sb.append("\\draw[").append(isNew ? "trNeu" : "tr").append("] (").append(e.from().name()).append(") -- (")
+                    .append(e.to().name()).append(")");
+            if (e.label() != null) {
+                sb.append("\n  node[lbl, ").append(e.place()).append(isNew ? ", text=fsmNeu" : "").append("] {")
+                        .append(e.label()).append("}");
             }
+            sb.append(";\n");
         }
-        // Rueckkehr zu S0 als kurze Markierung unter den Endzustaenden
+        // Rueckkehr zu S0: Endzustaende fuehren senkrecht auf die Linie von S4 (unten links)
+        double bottom = State.S4.y;
+        double right = all.stream().mapToDouble(st -> st.x).max().orElse(0) + 2.0;
         for (State s : all) {
-            boolean terminal = kinds.stream().anyMatch(k -> k.path.get(k.path.size() - 1) == s);
+            boolean terminal = s != State.S4 && kinds.stream().anyMatch(k -> k.path.get(k.path.size() - 1) == s);
             if (terminal) {
                 boolean isNew = !baseStates.contains(s);
-                sb.append(String.format("\\draw[->, thick%s] (%s.south) -- ++(0,-0.45) node[below, font=\\tiny%s] {zu S0};%n",
-                        isNew ? ", fsmNeu" : "", s.name(), isNew ? ", text=fsmNeu" : ""));
+                sb.append(String.format(Locale.ROOT, "\\draw[%s] (%s.south) -- (%s.south |- S4.east);%n",
+                        isNew ? "fsmNeu, very thick" : "semithick", s.name(), s.name()));
             }
         }
+        sb.append(String.format(Locale.ROOT, "\\draw[tr] (S4.east) -- (%.1f,%.1f) -- (%.1f,2.2) -- (0,2.2) -- (S0.north);%n",
+                right, bottom, right));
         sb.append("\\end{tikzpicture}\n");
         return sb.toString();
     }

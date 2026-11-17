@@ -78,8 +78,8 @@ class CpuTest {
             Exercise.Part a = ex.generate(new Random(seed));
             assertEquals(a, ex.generate(new Random(seed)));
             seen.add(a.frage().substring(a.frage().lastIndexOf(' ') + 1));
-            assertTrue(a.loesung().contains("fsmNeu, very thick"), "neue Teile markiert");
-            assertTrue(!a.aufgabe().contains("fsmNeu, very thick") && !a.aufgabe().contains("[st,neu]"),
+            assertTrue(a.loesung().contains("[trNeu]"), "neue Teile markiert");
+            assertTrue(!a.aufgabe().contains("[trNeu]") && !a.aufgabe().contains("[state,neu]"),
                     "Aufgabe verraet nichts");
         }
         assertEquals(MulticycleFsm.TARGETS.size(), seen.size(), "alle Befehle kommen vor: " + seen);
@@ -232,5 +232,75 @@ class CpuTest {
             assertTrue(stalls >= 1);
             assertTrue(a.loesung().contains("0 Stalls"));
         }
+    }
+
+    // ------------------------------------------------------------------ Neuer Befehl (Datenpfad-Modell)
+
+    /** Das Modell muss die Befehle der Vorlesung mit derselben Taktzahl finden wie Harris & Harris. */
+    @Test
+    void datapathSearchReproducesLectureCycleCounts() {
+        Map<String, Integer> expected = Map.of("lw", 5, "sw", 4, "jal", 4, "add", 4, "addi", 4);
+        Map<String, Datapath.Goal> goals = Map.of(
+                "lw", new Datapath.Goal("M[rs1+imm]", null, null, null),
+                "sw", new Datapath.Goal(null, null, "rs1+imm", "rs2"),
+                "jal", new Datapath.Goal("pc+4", "pc+imm", null, null),
+                "add", new Datapath.Goal("rs1+rs2", null, null, null),
+                "addi", new Datapath.Goal("rs1+imm", null, null, null));
+        for (var e : goals.entrySet()) {
+            List<List<Datapath.Step>> sols = Datapath.shortest(e.getValue(), 6);
+            assertTrue(!sols.isEmpty(), e.getKey());
+            assertEquals(expected.get(e.getKey()), sols.get(0).size() + 2, e.getKey());
+            for (List<Datapath.Step> sol : sols) {
+                for (long seed = 0; seed < 30; seed++) {
+                    assertTrue(Datapath.simulate(e.getValue(), sol, seed), e.getKey() + " " + sol);
+                }
+            }
+        }
+        // lw ueber die Zustaende der Vorlesung: S2, S3, S4
+        List<String> lw = Datapath.shortest(goals.get("lw"), 6).stream()
+                .map(s -> s.stream().map(st -> NewInstructionFsm.match(st).map(Enum::name).orElse("?")).toList().toString())
+                .toList();
+        assertTrue(lw.contains("[S2, S3, S4]"), lw.toString());
+    }
+
+    /** Nicht umsetzbar ohne Aenderung am Datenpfad: zwei Registerschreibzugriffe, ALU auf Speicherwert. */
+    @Test
+    void datapathRejectsImpossibleInstructions() {
+        assertTrue(Datapath.shortest(new Datapath.Goal("rs1", null, null, null), 6).isEmpty(), "rs1 ohne ALU-Addition");
+        assertTrue(Datapath.shortest(new Datapath.Goal("imm", null, null, null), 6).isEmpty(), "lui-artig ohne Null-Quelle");
+    }
+
+    @Test
+    void everyCatalogPlanIsCorrectMinimalAndNeedsNewState() {
+        int plans = 0;
+        for (NewInstructionFsm.Given g : NewInstructionFsm.Given.values()) {
+            for (NewInstructionFsm.Plan p : NewInstructionFsm.plans(g)) {
+                plans++;
+                assertTrue(p.newStates() >= 1, p.ins().mnemonic());
+                for (long seed = 0; seed < 300; seed++) {
+                    assertTrue(Datapath.simulate(p.ins().goal(), p.steps(), seed), p.ins().mnemonic() + " " + p.steps());
+                }
+                // minimal: keine kuerzere Folge
+                assertEquals(p.steps().size(), Datapath.shortest(p.ins().goal(), 6).get(0).size());
+                // jeder Zustand hoechstens einmal im Pfad
+                assertEquals((long) p.nodes().size(), p.nodes().stream().map(NewInstructionFsm.Node::id).distinct().count());
+            }
+        }
+        assertTrue(plans >= 20, "genug Varianten: " + plans);
+    }
+
+    @Test
+    void newInstructionTaskDeterministicAndTaskDoesNotRevealSolution() {
+        NewInstructionFsm ex = new NewInstructionFsm();
+        Set<String> seen = new HashSet<>();
+        for (long seed = 0; seed < 300; seed++) {
+            Exercise.Part a = ex.generate(new Random(seed));
+            assertEquals(a, ex.generate(new Random(seed)));
+            assertTrue(!a.aufgabe().contains("[trNeu]") && !a.aufgabe().contains("[state,neu]"), a.frage());
+            assertTrue(a.loesung().contains("[state,neu]"), "neuer Zustand in der Loesung");
+            seen.add(a.frage().split(" ")[2]);
+        }
+        assertTrue(seen.size() >= 10, seen.toString());
+        assertEquals(2, new NewInstructionFsm("jalm,lwi").describe().split(",").length);
     }
 }
