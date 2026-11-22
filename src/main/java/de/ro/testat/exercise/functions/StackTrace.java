@@ -1,6 +1,7 @@
 package de.ro.testat.exercise.functions;
 
 import de.ro.testat.exercise.Exercise;
+import de.ro.testat.latex.Tex;
 import de.ro.testat.probelauf.RiscvMaschine;
 import de.ro.testat.probelauf.RiscvParser;
 
@@ -62,27 +63,27 @@ public final class StackTrace implements Exercise {
 
         StringBuilder a = new StringBuilder();
         a.append("Das folgende Programm wird ab Adresse \\texttt{0x00400000} ausgef\\\"uhrt (links die Adresse jedes Befehls). "
-                + "Zu Beginn gilt \\texttt{sp} = \\texttt{").append(hex(sp0)).append("} und \\texttt{s0} = ").append(s0)
+                + "Zu Beginn gilt \\texttt{sp} = \\texttt{").append(Tex.hex8(sp0)).append("} und \\texttt{s0} = ").append(s0)
                 .append(", alle anderen Register sind 0.\n");
         a.append(prog.listing(true, false));
         a.append("\\begin{enumerate}[label=\\alph*)]\n");
         a.append("\\item Welchen Wert hat \\texttt{sp}, wenn der mit (*) markierte Befehl zum ersten Mal ausgef\\\"uhrt wird?\n");
         a.append("\\item Geben Sie zu diesem Zeitpunkt den Inhalt des Stacks an: alle Speicherw\\\"orter von \\texttt{sp} bis "
-                + "\\texttt{").append(hex(sp0 - 4)).append("} mit Adresse und Wert.\n");
+                + "\\texttt{").append(Tex.hex8(sp0 - 4)).append("} mit Adresse und Wert.\n");
         a.append("\\item Welchen Wert hat \\texttt{a0} am Ende des Programms?\n");
         a.append("\\end{enumerate}\n");
 
         StringBuilder l = new StringBuilder();
         l.append("\\begin{enumerate}[label=\\alph*)]\n");
         int aufrufe = stack.size() / 2;
-        l.append("\\item \\texttt{sp} = \\texttt{").append(hex(sp)).append("}: ").append(aufrufe).append(" Aufrufe von \\texttt{")
+        l.append("\\item \\texttt{sp} = \\texttt{").append(Tex.hex8(sp)).append("}: ").append(aufrufe).append(" Aufrufe von \\texttt{")
                 .append(f.name).append("} (n = ").append(k).append(" bis ").append(k - aufrufe + 1).append(") mit je ")
                 .append(f.rahmen()).append(" Byte Stackrahmen.\n");
         l.append("\\item \\begin{tabular}[t]{lrl}\n\\hline\n\\textbf{Adresse} & \\textbf{Wert} & \\textbf{Bedeutung} \\\\\n\\hline\n");
         for (int i = stack.size() - 1; i >= 0; i--) {
             Eintrag e = stack.get(i);
-            l.append("\\texttt{").append(hex(e.adresse())).append("} & ")
-                    .append(e.bedeutung().startsWith("ra") ? "\\texttt{" + hex(e.wert()) + "}" : Integer.toString(e.wert()))
+            l.append("\\texttt{").append(Tex.hex8(e.adresse())).append("} & ")
+                    .append(e.bedeutung().startsWith("ra") ? "\\texttt{" + Tex.hex8(e.wert()) + "}" : Integer.toString(e.wert()))
                     .append(" & ").append(e.bedeutung()).append(" \\\\\n");
         }
         l.append("\\hline\n\\end{tabular}\\\\[2pt]\n(oben die kleinste Adresse = aktueller \\texttt{sp})\n");
@@ -91,8 +92,8 @@ public final class StackTrace implements Exercise {
         l.append("mit n = ").append(k).append(".\n");
         l.append("\\end{enumerate}\n");
 
-        String frage = f.name + "(" + k + "), sp=" + hex(sp0) + ", s0=" + s0;
-        String antwort = "sp=" + hex(sp) + ", " + stack.size() + " Woerter, a0=" + f.wert(k);
+        String frage = f.name + "(" + k + "), sp=" + Tex.hex8(sp0) + ", s0=" + s0;
+        String antwort = "sp=" + Tex.hex8(sp) + ", " + stack.size() + " Woerter, a0=" + f.wert(k);
         return new Part("Stack nachvollziehen", a.toString(), l.toString(), frage, antwort);
     }
 
@@ -135,9 +136,5 @@ public final class StackTrace implements Exercise {
             idx++;
         }
         throw new IllegalStateException("kein rekursiver Aufruf");
-    }
-
-    static String hex(int v) {
-        return String.format("0x%08X", v);
     }
 }

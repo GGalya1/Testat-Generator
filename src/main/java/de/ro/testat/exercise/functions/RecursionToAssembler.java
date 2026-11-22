@@ -1,13 +1,10 @@
 package de.ro.testat.exercise.functions;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 /**
  * "Rekursive Funktion in RISC-V" (wie Uebung 3.4/3.7): Eine zufaellige rekursive C-Funktion
@@ -30,24 +27,8 @@ public final class RecursionToAssembler implements Exercise {
 
     /** @param auswahl "zufall" oder Formen, z. B. "potenz,binom" */
     public RecursionToAssembler(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim();
-        if (this.auswahl.equalsIgnoreCase("zufall")) {
-            pool = List.of(RecursionForms.Form.values());
-        } else {
-            List<RecursionForms.Form> p = new ArrayList<>();
-            for (String s : this.auswahl.split(",")) {
-                String n = s.trim().toUpperCase(Locale.ROOT).replace('-', '_');
-                RecursionForms.Form f = Arrays.stream(RecursionForms.Form.values()).filter(x -> x.name().equals(n)).findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Unbekannte Form fuer rekursion: " + s + " (erlaubt: "
-                                + formen() + " oder zufall)"));
-                p.add(f);
-            }
-            pool = List.copyOf(p);
-        }
-    }
-
-    static String formen() {
-        return Arrays.stream(RecursionForms.Form.values()).map(x -> x.name().toLowerCase(Locale.ROOT)).collect(Collectors.joining(", "));
+        this.auswahl = Auswahl.normal(auswahl);
+        this.pool = Auswahl.formen(auswahl, RecursionForms.Form.class, false, "rekursion");
     }
 
     @Override
@@ -71,15 +52,9 @@ public final class RecursionToAssembler implements Exercise {
         RecursionForms.Instanz f = RecursionForms.erzeuge(form, rng);
 
         // Werte aus dem C-Interpreter, Musterloesung dagegen pruefen
-        List<String> kontrolle = new ArrayList<>();
-        for (int[] args : f.kontrolle()) {
-            int w = ConventionCheck.cWert(f.cCode(), ConventionCheck.aufruf(f.name(), args));
-            ConventionCheck.pruefe(f.funktion(), f.name(), f.params(), args, w);
-            kontrolle.add("\\texttt{" + ConventionCheck.aufruf(f.name(), args) + "} = " + w);
-        }
+        List<String> kontrolle = ConventionCheck.kontrollwerte(f.cCode(), f.funktion(), f.name(), f.params(), f.kontrolle());
         String aufruf = ConventionCheck.aufruf(f.name(), f.aufgabe());
-        int ergebnis = ConventionCheck.cWert(f.cCode(), aufruf);
-        ConventionCheck.pruefe(f.funktion(), f.name(), f.params(), f.aufgabe(), ergebnis);
+        int ergebnis = ConventionCheck.geprueft(f.cCode(), f.funktion(), f.name(), f.params(), f.aufgabe());
 
         StringBuilder a = new StringBuilder();
         a.append("Gegeben ist folgende rekursive C-Funktion:\n");
@@ -89,14 +64,12 @@ public final class RecursionToAssembler implements Exercise {
                 + "Aufrufkonventionen: ").append(argumentText(f.params())).append(" und das Ergebnis in \\texttt{a0}; "
                 + "\\texttt{ra} und alle Werte, die \\\"uber einen Aufruf hinweg ben\\\"otigt werden, sichern Sie auf dem Stack. "
                 + "F\\\"ur Multiplikation, Division und Rest d\\\"urfen Sie die M-Erweiterung verwenden.\n");
-        a.append("\\item Schreiben Sie ein Hauptprogramm, das \\texttt{").append(aufruf)
-                .append("} aufruft und danach mit \\texttt{ecall} (\\texttt{a7} = 10) endet.\n");
+        a.append(ConventionCheck.hauptprogrammItem(aufruf));
         a.append("\\end{enumerate}\n");
 
         AsmText loesung = ConventionCheck.main(f.name(), f.params(), f.aufgabe()).anhaengen(f.funktion());
         StringBuilder l = new StringBuilder();
-        l.append("M\\\"ogliche L\\\"osung (Pseudobefehle wie \\texttt{li}, \\texttt{mv}, \\texttt{call}, \\texttt{ret} "
-                + "sind ebenso richtig):\n");
+        l.append(ConventionCheck.LOESUNG_EINLEITUNG).append("):\n");
         l.append(loesung.listing(false, true));
         l.append("{\\sloppy Kontrollwerte (Ergebnis in \\texttt{a0}): ").append(String.join(", ", kontrolle))
                 .append(". Mit \\texttt{").append(aufruf).append("} muss am Ende \\texttt{a0} = ").append(ergebnis)

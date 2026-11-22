@@ -65,6 +65,21 @@ final class CacheModel {
         this(kapazitaetBytes, blockBytes, wege, Strategie.WRITE_BACK);
     }
 
+    /** Neuer, leerer Cache mit denselben Parametern. */
+    CacheModel leer() {
+        return new CacheModel(kapazitaet, blockBytes, wege, strategie);
+    }
+
+    /** Misses einer Lesefolge auf einem leeren Cache mit diesen Parametern (dieser Cache bleibt unveraendert). */
+    int misses(List<Integer> folge) {
+        CacheModel c = leer();
+        int m = 0;
+        for (int a : folge) {
+            m += c.lesen(a).hit() ? 0 : 1;
+        }
+        return m;
+    }
+
     /** Gleiche Groesse, gleicher Block, aber voll assoziativ (fuer die Einteilung der Misses). */
     CacheModel vollAssoziativ() {
         return new CacheModel(kapazitaet, blockBytes, kapazitaet / blockBytes, strategie);
@@ -202,7 +217,7 @@ final class CacheModel {
      * assoziativer LRU-Cache verfehlt, sonst conflict.
      */
     static List<MissArt> klassifiziere(CacheModel leer, List<Integer> adressen) {
-        CacheModel c = new CacheModel(leer.kapazitaet, leer.blockBytes, leer.wege);
+        CacheModel c = leer.leer();
         CacheModel voll = c.vollAssoziativ();
         Set<Integer> gesehen = new HashSet<>();
         List<MissArt> out = new ArrayList<>();
@@ -222,16 +237,6 @@ final class CacheModel {
             throw new IllegalArgumentException("keine Zweierpotenz: " + x);
         }
         return Integer.numberOfTrailingZeros(x);
-    }
-
-    /** "0x4C" (ohne fuehrende Nullen). */
-    static String hex(int v) {
-        return "0x" + Integer.toHexString(v).toUpperCase();
-    }
-
-    /** "0x0000004C" */
-    static String hex8(int v) {
-        return String.format("0x%08X", v);
     }
 
     /** "16 KiB", "64 Byte", "1 MiB" */

@@ -1,13 +1,10 @@
 package de.ro.testat.exercise.functions;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 /**
  * "Funktionsaufrufe in RISC-V": Ein C-Programm aus einer Blattfunktion g (if/else oder
@@ -30,24 +27,8 @@ public final class CallToAssembler implements Exercise {
 
     /** @param auswahl "zufall" oder Formen der aufrufenden Funktion, z. B. "summe,zwei_aufrufe" */
     public CallToAssembler(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim();
-        if (this.auswahl.equalsIgnoreCase("zufall")) {
-            pool = List.of(CallChain.Rufer.values());
-        } else {
-            List<CallChain.Rufer> p = new ArrayList<>();
-            for (String s : this.auswahl.split(",")) {
-                String n = s.trim().toUpperCase(Locale.ROOT).replace('-', '_');
-                CallChain.Rufer r = Arrays.stream(CallChain.Rufer.values()).filter(x -> x.name().equals(n)).findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Unbekannte Form fuer aufruf: " + s + " (erlaubt: "
-                                + formen() + " oder zufall)"));
-                p.add(r);
-            }
-            pool = List.copyOf(p);
-        }
-    }
-
-    static String formen() {
-        return Arrays.stream(CallChain.Rufer.values()).map(x -> x.name().toLowerCase(Locale.ROOT)).collect(Collectors.joining(", "));
+        this.auswahl = Auswahl.normal(auswahl);
+        this.pool = Auswahl.formen(auswahl, CallChain.Rufer.class, false, "aufruf");
     }
 
     @Override
@@ -73,21 +54,10 @@ public final class CallToAssembler implements Exercise {
         String c = p.cCode();
 
         // Kontrolle: g allein, dann f (mit g) - jeweils gegen den C-Interpreter
-        List<String> kg = new ArrayList<>();
-        for (int[] args : g.kontrolle()) {
-            int w = ConventionCheck.cWert(c, ConventionCheck.aufruf(g.name(), args));
-            ConventionCheck.pruefe(g.asm(), g.name(), g.params(), args, w);
-            kg.add("\\texttt{" + ConventionCheck.aufruf(g.name(), args) + "} = " + w);
-        }
-        List<String> kf = new ArrayList<>();
-        for (int[] args : f.kontrolle()) {
-            int w = ConventionCheck.cWert(c, ConventionCheck.aufruf(f.name(), args));
-            ConventionCheck.pruefe(p.asm(), f.name(), f.params(), args, w);
-            kf.add("\\texttt{" + ConventionCheck.aufruf(f.name(), args) + "} = " + w);
-        }
+        List<String> kg = ConventionCheck.kontrollwerte(c, g.asm(), g.name(), g.params(), g.kontrolle());
+        List<String> kf = ConventionCheck.kontrollwerte(c, p.asm(), f.name(), f.params(), f.kontrolle());
         String aufruf = ConventionCheck.aufruf(f.name(), p.aufgabe());
-        int ergebnis = ConventionCheck.cWert(c, aufruf);
-        ConventionCheck.pruefe(p.asm(), f.name(), f.params(), p.aufgabe(), ergebnis);
+        int ergebnis = ConventionCheck.geprueft(c, p.asm(), f.name(), f.params(), p.aufgabe());
 
         String gT = "\\texttt{" + g.name() + "}";
         String fT = "\\texttt{" + f.name() + "}";
@@ -100,14 +70,12 @@ public final class CallToAssembler implements Exercise {
                 + "\\texttt{a0}. Eine aufgerufene Funktion darf alle \\texttt{t}- und \\texttt{a}-Register ver\\\"andern, muss "
                 + "aber \\texttt{sp} und alle \\texttt{s}-Register wiederherstellen. F\\\"ur die Multiplikation d\\\"urfen Sie "
                 + "die M-Erweiterung verwenden.\n");
-        a.append("\\item Schreiben Sie ein Hauptprogramm, das \\texttt{").append(aufruf)
-                .append("} aufruft und danach mit \\texttt{ecall} (\\texttt{a7} = 10) endet.\n");
+        a.append(ConventionCheck.hauptprogrammItem(aufruf));
         a.append("\\end{enumerate}\n");
 
         AsmText loesung = ConventionCheck.main(f.name(), f.params(), p.aufgabe()).anhaengen(p.asm());
         StringBuilder l = new StringBuilder();
-        l.append("M\\\"ogliche L\\\"osung (Pseudobefehle wie \\texttt{li}, \\texttt{mv}, \\texttt{call}, \\texttt{ret} "
-                + "sind ebenso richtig; die Funktionen d\\\"urfen in beliebiger Reihenfolge stehen):\n");
+        l.append(ConventionCheck.LOESUNG_EINLEITUNG).append("; die Funktionen d\\\"urfen in beliebiger Reihenfolge stehen):\n");
         l.append(loesung.listing(false, true));
         l.append("{\\sloppy Kontrollwerte: ").append(String.join(", ", kg)).append("; ").append(String.join(", ", kf))
                 .append(". Mit \\texttt{").append(aufruf).append("} muss am Ende \\texttt{a0} = ").append(ergebnis)

@@ -1,6 +1,7 @@
 package de.ro.testat.exercise.memory;
 
 import de.ro.testat.exercise.Exercise;
+import de.ro.testat.latex.Tex;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -99,10 +100,10 @@ public final class VirtualMemory implements Exercise {
         StringBuilder kurz = new StringBuilder();
         for (int i = 0; i < va.size(); i++) {
             Eintrag e = ziele.get(i);
-            kurz.append(CacheModel.hex8(va.get(i))).append("->")
-                    .append(e.gueltig() ? CacheModel.hex8((int) pa(va.get(i), e.ppn(), off)) : "PF").append(' ');
+            kurz.append(Tex.hex8(va.get(i))).append("->")
+                    .append(e.gueltig() ? Tex.hex8((int) pa(va.get(i), e.ppn(), off)) : "PF").append(' ');
         }
-        String frage = "PA " + paBits + " Bit, Seite " + seite + " B, VAs " + va.stream().map(CacheModel::hex8).toList();
+        String frage = "PA " + paBits + " Bit, Seite " + seite + " B, VAs " + va.stream().map(Tex::hex8).toList();
         String antwort = "off/VPN/PPN=" + off + "/" + vpnBits + "/" + ppnBits + ", PT " + bits + " Bit; " + kurz.toString().trim();
         return new Part("Virtueller Speicher", a.toString(), l.toString(), frage, antwort);
     }
@@ -146,7 +147,7 @@ public final class VirtualMemory implements Exercise {
         for (int i = 0; i < va.size(); i++) {
             int v = va.get(i);
             if (ziele == null) {
-                zeilen.add(List.of("\\texttt{" + CacheModel.hex8(v) + "}", "", "", "", ""));
+                zeilen.add(List.of("\\texttt{" + Tex.hex8(v) + "}", "", "", "", ""));
                 continue;
             }
             int vpn = v >>> off;
@@ -168,7 +169,7 @@ public final class VirtualMemory implements Exercise {
             } else {
                 ergebnis = "Seitenfehler (V = 0)";
             }
-            zeilen.add(List.of("\\texttt{" + CacheModel.hex8(v) + "}", "\\texttt{" + hexN(Integer.toUnsignedLong(vpn), vpnHex) + "}",
+            zeilen.add(List.of("\\texttt{" + Tex.hex8(v) + "}", "\\texttt{" + hexN(Integer.toUnsignedLong(vpn), vpnHex) + "}",
                     "\\texttt{" + hexN(v & ((1L << off) - 1), offHex) + "}", imTlb ? "ja" : "nein", ergebnis));
         }
         return MemTex.tabelle("|c|p{2cm}|p{1.6cm}|p{1.5cm}|p{3.8cm}|",

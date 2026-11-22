@@ -35,11 +35,13 @@ mein-geheimer-schluessel-testat1-x8Fq2      <- optional, nur in der ersten Zeile
 
 - **Mit Schlüssel:** Seed = HMAC-SHA256(Schlüssel, Thema | Matrikelnummer). Dieselbe Datei
   erzeugt immer dieselben Aufgaben; ohne den Schlüssel sind sie nicht vorhersagbar.
+  Thema ist die Vorlage (`--vorlage`) bzw. bei `--aufgaben` der Titel zusammen mit der Aufgabenliste –
+  zwei verschiedene eigene Testate liefern also auch bei gleichem Schlüssel verschiedene Aufgaben.
   Für einen Nachtermin einen **neuen** Schlüssel verwenden.
 - **Ohne Schlüssel:** zufällige Seeds. Reproduzierbar nur über die Zuordnungsdatei.
 - Der Schlüssel muss mindestens ein Zeichen enthalten, das keine Ziffer ist (so wird eine
   vertippte Matrikelnummer nie als Schlüssel gelesen). Empfohlen: ≥ 12 zufällige Zeichen.
-- Matrikelnummern: 6 Ziffern. Ungültige Zeilen und Duplikate werden mit Warnung übersprungen.
+- Matrikelnummern: 6 oder 7 Ziffern. Ungültige Zeilen und Duplikate werden mit Warnung übersprungen.
   Das Format steht in `WerkFile.MATRIKEL`.
 
 ### Vorlagen und eigene Ketten

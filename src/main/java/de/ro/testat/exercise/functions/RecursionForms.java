@@ -1,5 +1,7 @@
 package de.ro.testat.exercise.functions;
 
+import static de.ro.testat.latex.Tex.tt;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -69,10 +71,6 @@ final class RecursionForms {
 
     private static List<int[]> args(int[]... a) {
         return List.of(a);
-    }
-
-    private static String tt(String s) {
-        return "\\texttt{" + s.replace("%", "\\%") + "}";
     }
 
     // ---------------------------------------------------------------------------------------

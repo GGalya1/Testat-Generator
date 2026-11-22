@@ -48,4 +48,12 @@ class WerkFileTest {
         assertFalse(w.key().isPresent());
         assertEquals(1, w.warnings().size());
     }
+
+    /** Die TU Darmstadt vergibt 7-stellige Matrikelnummern; 6-stellige bleiben erlaubt. */
+    @Test
+    void siebenstelligeMatrikelnummern() {
+        WerkFile w = WerkFile.parse(List.of("geheim-schluessel-7", "2512345", "123456", "12345678"));
+        assertEquals(List.of("2512345", "123456"), w.matrikel());
+        assertEquals(1, w.warnings().size());
+    }
 }

@@ -1,5 +1,7 @@
 package de.ro.testat.exercise.functions;
 
+import static de.ro.testat.latex.Tex.tt;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -52,7 +54,11 @@ final class CallChain {
     record Funktion(String name, List<String> params, String cCode, AsmText asm, List<int[]> kontrolle) {
     }
 
-    record Programm(Blatt blatt, Rufer rufer, Funktion g, Funktion f, int[] aufgabe, List<String> hinweise) {
+    /**
+     * zaehlCode: nur bei ITERATION der C-Code von f in der Fassung "return k;" (Anzahl der
+     * Schleifendurchlaeufe), sonst null.
+     */
+    record Programm(Blatt blatt, Rufer rufer, Funktion g, Funktion f, int[] aufgabe, List<String> hinweise, String zaehlCode) {
         /** C-Code beider Funktionen (g zuerst, damit f es aufrufen kann). */
         String cCode() {
             return g.cCode() + "\n" + f.cCode();
@@ -92,8 +98,8 @@ final class CallChain {
             }
         }
         if (p.rufer() == Rufer.ITERATION) {
-            // mindestens zwei Schleifendurchlaeufe in der Aufgabe: k aus "return k" bzw. Testlauf
-            String probe = p.g().cCode() + "\n" + p.f().cCode().replace("return k + x;", "return k;");
+            // mindestens zwei Schleifendurchlaeufe in der Aufgabe
+            String probe = p.g().cCode() + "\n" + p.zaehlCode();
             Integer k = ConventionCheck.cWert(probe, ConventionCheck.aufruf(p.f().name(), p.aufgabe()), 50_000);
             return k != null && k >= 2;
         }
@@ -443,20 +449,13 @@ final class CallChain {
                     + tt("a0") + "; die Konstante in ein " + tt("t") + "-Register zu laden ist jetzt erlaubt.");
         }
         Funktion f = new Funktion(fn, params, c, t, schleifenKontrolle(mitA));
-        return new Programm(b, r, g, f, aufgabe, h);
+        return new Programm(b, r, g, f, aufgabe, h, null);
     }
 
     private static Programm iteration(Blatt b, Funktion g, String fn, Random rng) {
         int schwelle = rng.nextInt(6);
         boolean mitX = rng.nextBoolean();
-        String c = "int " + fn + "(int x) {\n"
-                + "    int k = 0;\n"
-                + "    while (x > " + schwelle + ") {\n"
-                + "        x = " + g.name() + "(x);\n"
-                + "        k = k + 1;\n"
-                + "    }\n"
-                + "    return " + (mitX ? "k + x" : "k") + ";\n"
-                + "}\n";
+        String c = iterationC(fn, g.name(), schwelle, mitX ? "k + x" : "k");
         AsmText t = new AsmText();
         t.marke(fn);
         ConventionCheck.prolog(t, 1);
@@ -478,7 +477,18 @@ final class CallChain {
         int x = 20 + rng.nextInt(41);
         Funktion f = new Funktion(fn, List.of("x"), c, t,
                 List.of(new int[]{0}, new int[]{7}, new int[]{15}, new int[]{30}, new int[]{50}));
-        return new Programm(b, Rufer.ITERATION, g, f, new int[]{x}, h);
+        return new Programm(b, Rufer.ITERATION, g, f, new int[]{x}, h, iterationC(fn, g.name(), schwelle, "k"));
+    }
+
+    private static String iterationC(String fn, String g, int schwelle, String ergebnis) {
+        return "int " + fn + "(int x) {\n"
+                + "    int k = 0;\n"
+                + "    while (x > " + schwelle + ") {\n"
+                + "        x = " + g + "(x);\n"
+                + "        k = k + 1;\n"
+                + "    }\n"
+                + "    return " + ergebnis + ";\n"
+                + "}\n";
     }
 
     private static Programm zweiAufrufe(Blatt b, Funktion g, String fn, Random rng) {
@@ -553,7 +563,7 @@ final class CallChain {
         int y = 1 + rng.nextInt(6);
         Funktion f = new Funktion(fn, List.of("x", "y"), c, t,
                 List.of(new int[]{3, 2}, new int[]{1, 4}, new int[]{5, 5}, new int[]{-2, 3}, new int[]{0, 2}));
-        return new Programm(b, Rufer.ZWEI_AUFRUFE, g, f, new int[]{x, y}, h);
+        return new Programm(b, Rufer.ZWEI_AUFRUFE, g, f, new int[]{x, y}, h, null);
     }
 
     private static Programm bedingt(Blatt b, Funktion g, String fn, Random rng) {
@@ -608,10 +618,6 @@ final class CallChain {
         int a = 1 + rng.nextInt(4);
         int n = 3 + rng.nextInt(4);
         Funktion f = new Funktion(fn, mitA ? List.of("a", "n") : List.of("n"), c, t, schleifenKontrolle(mitA));
-        return new Programm(b, Rufer.BEDINGT, g, f, mitA ? new int[]{a, n} : new int[]{n}, h);
-    }
-
-    static String tt(String s) {
-        return "\\texttt{" + s.replace("%", "\\%") + "}";
+        return new Programm(b, Rufer.BEDINGT, g, f, mitA ? new int[]{a, n} : new int[]{n}, h, null);
     }
 }

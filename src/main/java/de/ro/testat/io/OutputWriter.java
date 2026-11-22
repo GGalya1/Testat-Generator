@@ -38,14 +38,23 @@ public final class OutputWriter {
             w.write("matrikelnummer;thema;optionen;seed;schluessel;aufgabe;frage;antwort\n");
             for (MappingRow r : rows) {
                 w.write(String.join(";",
-                        r.matrikel(), r.thema(), clean(r.optionen()), String.format("%016x", r.seed()),
-                        r.mitSchluessel() ? "ja" : "nein", r.aufgabe(), clean(r.frage()), clean(r.antwort())));
+                        feld(r.matrikel()), feld(r.thema()), feld(r.optionen()), String.format("%016x", r.seed()),
+                        r.mitSchluessel() ? "ja" : "nein", feld(r.aufgabe()), feld(r.frage()), feld(r.antwort())));
                 w.write("\n");
             }
         }
     }
 
-    private static String clean(String s) {
-        return s.replace(";", ",").replace("\n", " ");
+    /**
+     * Ein CSV-Feld: Zeilenumbrueche werden zu Leerzeichen (eine Zeile pro Aufgabe); enthaelt das
+     * Feld ; oder ", steht es in Anfuehrungszeichen und " wird verdoppelt (RFC 4180). Frueher wurde
+     * ; durch , ersetzt - das hat C-Code wie for (i = 0; i < n; i++) verfaelscht.
+     */
+    static String feld(String s) {
+        String t = s.replace("\r\n", " ").replace('\n', ' ').replace('\r', ' ');
+        if (t.indexOf(';') < 0 && t.indexOf('"') < 0) {
+            return t;
+        }
+        return '"' + t.replace("\"", "\"\"") + '"';
     }
 }

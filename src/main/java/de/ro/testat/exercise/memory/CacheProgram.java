@@ -1,13 +1,14 @@
 package de.ro.testat.exercise.memory;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
+import de.ro.testat.latex.Tex;
 import de.ro.testat.probelauf.RiscvMaschine;
 import de.ro.testat.probelauf.RiscvParser;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
 
@@ -30,10 +31,7 @@ public final class CacheProgram implements Exercise {
 
     /** @param auswahl "schleife", "array" oder "zufall" */
     public CacheProgram(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim().toLowerCase(Locale.ROOT);
-        if (!List.of("zufall", "schleife", "array").contains(this.auswahl)) {
-            throw new IllegalArgumentException("cache-prog: Parameter schleife, array oder zufall");
-        }
+        this.auswahl = Auswahl.variante(auswahl, "cache-prog", "schleife", "array");
     }
 
     @Override
@@ -82,11 +80,11 @@ public final class CacheProgram implements Exercise {
             for (int i = 0; i < n; i++) {
                 folge.addAll(lade);
             }
-            int[] ma = misses(a, folge);
-            int[] mb = misses(b, folge);
+            int ma = a.misses(folge);
+            int mb = b.misses(folge);
             List<CacheModel.MissArt> arten = CacheModel.klassifiziere(a, folge);
             long konflikt = arten.stream().filter(x -> x == CacheModel.MissArt.CONFLICT).count();
-            if (konflikt == 0 || mb[0] >= ma[0]) {
+            if (konflikt == 0 || mb >= ma) {
                 continue;
             }
             // Programm und Kontrolle per Simulator
@@ -94,7 +92,7 @@ public final class CacheProgram implements Exercise {
             p.append("      addi s0, zero, ").append(n).append('\n');
             p.append("loop: beq  s0, zero, done\n");
             for (int i = 0; i < lade.size(); i++) {
-                p.append("      lw   s").append(i + 1).append(", ").append(CacheModel.hex(lade.get(i))).append("(zero)\n");
+                p.append("      lw   s").append(i + 1).append(", ").append(Tex.hex(lade.get(i))).append("(zero)\n");
             }
             p.append("      addi s0, s0, -1\n");
             p.append("      j    loop\n");
@@ -106,7 +104,7 @@ public final class CacheProgram implements Exercise {
     }
 
     private Part schleifeText(String prog, int n, List<Integer> lade, List<Integer> folge, CacheModel a, CacheModel b,
-                              int[] ma, int[] mb, List<CacheModel.MissArt> arten) {
+                              int ma, int mb, List<CacheModel.MissArt> arten) {
         StringBuilder t = new StringBuilder();
         t.append("Das folgende Programm l\\\"auft auf einem Prozessor mit Daten-Cache. Betrachten Sie nur die Datenzugriffe "
                 + "(\\texttt{lw}); der Cache ist anfangs leer, Ersetzung LRU.\n");
@@ -122,21 +120,21 @@ public final class CacheProgram implements Exercise {
                 .append(lade.size()).append(" = ").append(folge.size()).append("$ Zugriffe.\n");
         l.append("\\begin{enumerate}[label=\\alph*)]\n");
         l.append("\\item Cache A (").append(a.saetze).append(" S\\\"atze):\n").append(matrix(a, lade, n));
-        l.append("Miss-Rate ").append(MemTex.rate(ma[0], folge.size())).append(".\n");
+        l.append("Miss-Rate ").append(MemTex.rate(ma, folge.size())).append(".\n");
         l.append("\\item Cache B (").append(b.saetze).append(b.saetze == 1 ? " Satz" : " S\\\"atze").append(", ")
                 .append(b.wege).append(" Wege):\n").append(matrix(b, lade, n));
-        l.append("Miss-Rate ").append(MemTex.rate(mb[0], folge.size())).append(".\n");
+        l.append("Miss-Rate ").append(MemTex.rate(mb, folge.size())).append(".\n");
         l.append("\\item ").append(einteilung(arten)).append("\n");
         l.append("\\end{enumerate}\n");
-        String frage = "Schleife n=" + n + " lw " + lade.stream().map(CacheModel::hex).toList() + ", A: " + a.organisation() + " "
+        String frage = "Schleife n=" + n + " lw " + lade.stream().map(Tex::hex).toList() + ", A: " + a.organisation() + " "
                 + a.kapazitaet / 4 + " W/" + a.worteProBlock() + " W, B: " + b.organisation();
-        String antwort = "A " + ma[0] + "/" + folge.size() + ", B " + mb[0] + "/" + folge.size() + ", " + einteilungKurz(arten);
+        String antwort = "A " + ma + "/" + folge.size() + ", B " + mb + "/" + folge.size() + ", " + einteilungKurz(arten);
         return new Part("Miss-Rate einer Schleife", t.toString(), l.toString(), frage, antwort);
     }
 
     /** Tabelle Ladeadresse x Durchlauf mit H/M, dazu Satz und Tag. */
     private static String matrix(CacheModel leer, List<Integer> lade, int n) {
-        CacheModel c = new CacheModel(leer.kapazitaet, leer.blockBytes, leer.wege);
+        CacheModel c = leer.leer();
         String[][] hm = new String[lade.size()][n];
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < lade.size(); j++) {
@@ -149,8 +147,8 @@ public final class CacheProgram implements Exercise {
         }
         List<List<String>> zeilen = new ArrayList<>();
         for (int j = 0; j < lade.size(); j++) {
-            List<String> z = new ArrayList<>(List.of("\\texttt{" + CacheModel.hex(lade.get(j)) + "}",
-                    Integer.toString(c.satz(lade.get(j))), "\\texttt{" + CacheModel.hex(c.tag(lade.get(j))) + "}"));
+            List<String> z = new ArrayList<>(List.of("\\texttt{" + Tex.hex(lade.get(j)) + "}",
+                    Integer.toString(c.satz(lade.get(j))), "\\texttt{" + Tex.hex(c.tag(lade.get(j))) + "}"));
             z.addAll(List.of(hm[j]));
             zeilen.add(z);
         }
@@ -196,15 +194,15 @@ public final class CacheProgram implements Exercise {
         if (prog.marken().get("b") != basisB || prog.marken().get("a") != basisA) {
             throw new IllegalStateException("Interner Fehler: Array-Adressen");
         }
-        int[] ma = misses(a, folge);
-        int[] mb = misses(b, folge);
+        int ma = a.misses(folge);
+        int mb = b.misses(folge);
         List<CacheModel.MissArt> arten = CacheModel.klassifiziere(a, folge);
 
         StringBuilder t = new StringBuilder();
         t.append("Gegeben ist folgender C-Code:\n");
         t.append("\\begin{lstlisting}[language=C]\n")
-                .append("int a[").append(n).append("];   // a[0] liegt bei ").append(CacheModel.hex8(basisA)).append('\n')
-                .append("int b[").append(n).append("];   // b[0] liegt bei ").append(CacheModel.hex8(basisB)).append('\n')
+                .append("int a[").append(n).append("];   // a[0] liegt bei ").append(Tex.hex8(basisA)).append('\n')
+                .append("int b[").append(n).append("];   // b[0] liegt bei ").append(Tex.hex8(basisB)).append('\n')
                 .append("int s = 0;\n")
                 .append("for (int i = 0; i < ").append(n).append("; i++)\n")
                 .append("    s = s + a[i] + b[i];\n")
@@ -223,13 +221,13 @@ public final class CacheProgram implements Exercise {
                 .append(abstand % kapBytes == 0 ? "landen \\texttt{a[i]} und \\texttt{b[i]} in Cache A immer im selben Satz."
                         : "liegen \\texttt{a[i]} und \\texttt{b[i]} in Cache A in verschiedenen S\\\"atzen.").append('\n');
         l.append("\\begin{enumerate}[label=\\alph*)]\n");
-        l.append("\\item ").append(erklaerungArray(a, n, ma[0])).append(" Miss-Rate ").append(MemTex.rate(ma[0], folge.size())).append(".\n");
-        l.append("\\item ").append(erklaerungArray(b, n, mb[0])).append(" Miss-Rate ").append(MemTex.rate(mb[0], folge.size())).append(".\n");
+        l.append("\\item ").append(erklaerungArray(a, n, ma)).append(" Miss-Rate ").append(MemTex.rate(ma, folge.size())).append(".\n");
+        l.append("\\item ").append(erklaerungArray(b, n, mb)).append(" Miss-Rate ").append(MemTex.rate(mb, folge.size())).append(".\n");
         l.append("\\item ").append(einteilung(arten)).append("\n");
         l.append("\\end{enumerate}\n");
-        String frage = "Array n=" + n + ", a@" + CacheModel.hex8(basisA) + " b@" + CacheModel.hex8(basisB) + ", Cache " + kapWorte
+        String frage = "Array n=" + n + ", a@" + Tex.hex8(basisA) + " b@" + Tex.hex8(basisB) + ", Cache " + kapWorte
                 + " W, Block " + blockWorte + " W";
-        String antwort = "A " + ma[0] + "/" + folge.size() + ", B " + mb[0] + "/" + folge.size() + ", " + einteilungKurz(arten);
+        String antwort = "A " + ma + "/" + folge.size() + ", B " + mb + "/" + folge.size() + ", " + einteilungKurz(arten);
         return new Part("Miss-Rate einer Array-Schleife", t.toString(), l.toString(), frage, antwort);
     }
 
@@ -249,16 +247,6 @@ public final class CacheProgram implements Exercise {
     }
 
     // ------------------------------------------------------------------ gemeinsam
-
-    /** {Misses} auf frischem Cache mit denselben Parametern. */
-    private static int[] misses(CacheModel leer, List<Integer> folge) {
-        CacheModel c = new CacheModel(leer.kapazitaet, leer.blockBytes, leer.wege);
-        int m = 0;
-        for (int a : folge) {
-            m += c.lesen(a).hit() ? 0 : 1;
-        }
-        return new int[]{m};
-    }
 
     /** Programm uebersetzen, ausfuehren und Speicherzugriffe mit der Modellfolge vergleichen. */
     private static RiscvParser.Programm vergleiche(String quelle, List<Integer> folge) {

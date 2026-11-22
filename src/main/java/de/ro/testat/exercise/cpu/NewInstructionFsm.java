@@ -1,5 +1,6 @@
 package de.ro.testat.exercise.cpu;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
 import de.ro.testat.exercise.cpu.Datapath.Goal;
 import de.ro.testat.exercise.cpu.Datapath.Step;
@@ -110,19 +111,8 @@ public final class NewInstructionFsm implements Exercise {
 
     /** @param auswahl "zufall" oder Befehle, z. B. "jalm,lwi,swpc" */
     public NewInstructionFsm(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim();
-        if (this.auswahl.equalsIgnoreCase("zufall")) {
-            pool = CATALOG;
-        } else {
-            List<Instr> p = new ArrayList<>();
-            for (String m : this.auswahl.toLowerCase(Locale.ROOT).split(",")) {
-                Instr i = CATALOG.stream().filter(c -> c.mnemonic().equals(m.trim())).findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Unbekannter Befehl fuer mehrtakt-neu: " + m
-                                + " (erlaubt: " + CATALOG.stream().map(Instr::mnemonic).collect(Collectors.joining(", ")) + ")"));
-                p.add(i);
-            }
-            pool = List.copyOf(p);
-        }
+        this.auswahl = Auswahl.normal(auswahl);
+        this.pool = Auswahl.liste(auswahl, CATALOG, Instr::mnemonic, false, "mehrtakt-neu");
     }
 
     @Override

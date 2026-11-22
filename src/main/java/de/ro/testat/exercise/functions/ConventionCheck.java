@@ -42,7 +42,7 @@ final class ConventionCheck {
         t.b("addi sp, sp, -" + r, "Platz fuer " + was);
         t.b("sw   ra, " + (r - 4) + "(sp)", "Ruecksprungadresse sichern");
         for (int i = 0; i < anzahlS; i++) {
-            t.b("sw   s" + i + ", " + (r - 8 - 4 * i) + "(sp)", i == 0 ? "s-Register des Aufrufers sichern" : null);
+            t.b("sw   s" + i + ", " + (r - 8 - 4 * i) + "(sp)", "s" + i + " des Aufrufers sichern");
         }
     }
 
@@ -145,6 +145,35 @@ final class ConventionCheck {
             }
         }
     }
+
+    /**
+     * Kontrollwerte: fuer jedes Argument den Wert aus dem C-Interpreter holen, die Musterloesung
+     * damit pruefen ({@link #pruefe}) und "\\texttt{f(args)} = Wert" fuer die Loesung liefern.
+     */
+    static List<String> kontrollwerte(String cCode, AsmText funktionen, String name, List<String> params, List<int[]> argumente) {
+        List<String> out = new java.util.ArrayList<>();
+        for (int[] args : argumente) {
+            out.add("\\texttt{" + aufruf(name, args) + "} = " + geprueft(cCode, funktionen, name, params, args));
+        }
+        return out;
+    }
+
+    /** Wert von name(args) aus dem C-Interpreter; die Musterloesung muss ihn ebenfalls liefern. */
+    static int geprueft(String cCode, AsmText funktionen, String name, List<String> params, int[] args) {
+        int w = cWert(cCode, aufruf(name, args));
+        pruefe(funktionen, name, params, args, w);
+        return w;
+    }
+
+    /** Teilaufgabe "Hauptprogramm" (gleich fuer alle Funktionsaufgaben). */
+    static String hauptprogrammItem(String aufruf) {
+        return "\\item Schreiben Sie ein Hauptprogramm, das \\texttt{" + aufruf
+                + "} aufruft und danach mit \\texttt{ecall} (\\texttt{a7} = 10) endet.\n";
+    }
+
+    /** Einleitung der Musterloesung (gleich fuer alle Funktionsaufgaben). */
+    static final String LOESUNG_EINLEITUNG = "M\\\"ogliche L\\\"osung (Pseudobefehle wie \\texttt{li}, \\texttt{mv}, "
+            + "\\texttt{call}, \\texttt{ret} sind ebenso richtig";
 
     /** Argument-Ausdruck ("v", "v + w", "v - w", "v * w") nach ziel berechnen; Variablen per reg. */
     static void argument(AsmText t, String ausdruck, String ziel, Map<String, String> reg) {

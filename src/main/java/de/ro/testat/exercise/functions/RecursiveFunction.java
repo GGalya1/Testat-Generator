@@ -124,15 +124,9 @@ final class RecursiveFunction {
     /** Nur die Funktion selbst (ohne Hauptprogramm). */
     AsmText funktion(boolean markiereBasis) {
         boolean zwei = !form.eineRekursion;
-        int rahmen = zwei ? 12 : 8;
         AsmText t = new AsmText();
         t.marke(name);
-        t.b("addi sp, sp, -" + rahmen, "Platz fuer " + (zwei ? "ra, s0, s1" : "ra, s0"));
-        t.b("sw   ra, " + (rahmen - 4) + "(sp)", "Ruecksprungadresse sichern");
-        t.b("sw   s0, " + (rahmen - 8) + "(sp)", "s0 des Aufrufers sichern");
-        if (zwei) {
-            t.b("sw   s1, 0(sp)", "s1 des Aufrufers sichern");
-        }
+        ConventionCheck.prolog(t, zwei ? 2 : 1);
         t.b("addi s0, a0, 0", "n in s0 (bleibt ueber Aufrufe erhalten)");
         switch (form) {
             case PROD, FIB, FIB_MUL -> {
@@ -185,18 +179,12 @@ final class RecursiveFunction {
             }
         }
         t.marke("L2");
-        if (zwei) {
-            t.b("lw   s1, 0(sp)", "gesicherte Register zurueck");
-        }
-        t.b("lw   s0, " + (rahmen - 8) + "(sp)", zwei ? null : "gesicherte Register zurueck");
-        t.b("lw   ra, " + (rahmen - 4) + "(sp)");
-        t.b("addi sp, sp, " + rahmen, "Stack freigeben");
-        t.b("jalr zero, 0(ra)", "ret");
+        ConventionCheck.epilog(t, zwei ? 2 : 1);
         return t;
     }
 
     /** Groesse eines Stackrahmens in Byte. */
     int rahmen() {
-        return form.eineRekursion ? 8 : 12;
+        return ConventionCheck.rahmen(form.eineRekursion ? 1 : 2);
     }
 }

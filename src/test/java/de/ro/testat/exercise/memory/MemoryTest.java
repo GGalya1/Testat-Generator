@@ -33,15 +33,15 @@ class MemoryTest {
     /** Harris &amp; Harris, Beispiel: direkt abgebildet, 8 Woerter, b = 1, Schleife 5x lw 0x4, 0xC, 0x8 -> 3/15. */
     @Test
     void textbookLoopDirectMapped() {
-        assertEquals(3L, (long) misses(new CacheModel(32, 4, 1), schleife(5, 0x4, 0xC, 0x8)));
+        assertEquals(3L, (long) new CacheModel(32, 4, 1).misses(schleife(5, 0x4, 0xC, 0x8)));
     }
 
     /** Harris &amp; Harris: lw 0x4, 0x24 im Wechsel, 5x: direkt abgebildet 10/10, 2-fach 2/10. */
     @Test
     void textbookConflictAndTwoWay() {
         List<Integer> f = schleife(5, 0x4, 0x24);
-        assertEquals(10L, (long) misses(new CacheModel(32, 4, 1), f));
-        assertEquals(2L, (long) misses(new CacheModel(32, 4, 2), f));
+        assertEquals(10L, (long) new CacheModel(32, 4, 1).misses(f));
+        assertEquals(2L, (long) new CacheModel(32, 4, 2).misses(f));
         List<CacheModel.MissArt> arten = CacheModel.klassifiziere(new CacheModel(32, 4, 1), f);
         assertEquals(8L, arten.stream().filter(x -> x == CacheModel.MissArt.CONFLICT).count());
     }
@@ -102,13 +102,5 @@ class MemoryTest {
             }
         }
         return f;
-    }
-
-    private static int misses(CacheModel c, List<Integer> f) {
-        int m = 0;
-        for (int a : f) {
-            m += c.lesen(a).hit() ? 0 : 1;
-        }
-        return m;
     }
 }

@@ -1,9 +1,10 @@
 package de.ro.testat.exercise.memory;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
+import de.ro.testat.latex.Tex;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -26,10 +27,7 @@ public final class CacheParameters implements Exercise {
 
     /** @param auswahl "vorwaerts", "rueckwaerts" oder "zufall" */
     public CacheParameters(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim().toLowerCase(Locale.ROOT);
-        if (!List.of("zufall", "vorwaerts", "rueckwaerts").contains(this.auswahl)) {
-            throw new IllegalArgumentException("cache-bits: Parameter vorwaerts, rueckwaerts oder zufall");
-        }
+        this.auswahl = Auswahl.variante(auswahl, "cache-bits", "vorwaerts", "rueckwaerts");
     }
 
     @Override
@@ -75,7 +73,7 @@ public final class CacheParameters implements Exercise {
         a.append("\\item Wie viele Bit der Adresse entfallen auf Byte-Offset, Block-Offset, Satzindex und Tag?\n");
         a.append("\\item Wie viele Bit Speicher braucht der Cache insgesamt, wenn jeder Block neben den Daten seinen Tag, ein "
                 + "Valid-Bit").append(writeBack ? " und ein Dirty-Bit" : "").append(" speichert (LRU-Bits vernachl\\\"assigen)?\n");
-        a.append("\\item Zerlegen Sie die Adresse \\texttt{").append(CacheModel.hex8(adr))
+        a.append("\\item Zerlegen Sie die Adresse \\texttt{").append(Tex.hex8(adr))
                 .append("}: Tag (hexadezimal), Satzindex, Block-Offset und Byte-Offset (dezimal).\n");
         a.append("\\end{enumerate}\n");
 
@@ -96,14 +94,14 @@ public final class CacheParameters implements Exercise {
                 .append(c.bloecke()).append(" \\cdot ").append(proBlock).append(" = ").append(MemTex.zahl(gesamt)).append("$~Bit.\n");
         int tag = c.tag(adr);
         l.append("\\item ").append(binaer(adr, tb, sb, bo)).append("\\\\\n");
-        l.append("Tag = \\texttt{").append(CacheModel.hex(tag)).append("}, Satz = ").append(c.satz(adr)).append(", Block-Offset = ")
+        l.append("Tag = \\texttt{").append(Tex.hex(tag)).append("}, Satz = ").append(c.satz(adr)).append(", Block-Offset = ")
                 .append(c.blockOffset(adr)).append(", Byte-Offset = ").append(CacheModel.byteOffset(adr)).append(".\n");
         l.append("\\end{enumerate}\n");
 
         String frage = CacheModel.groesse(c.kapazitaet).replace("~", " ") + ", N=" + c.wege + ", Block " + c.blockBytes + " B, "
-                + (writeBack ? "WB" : "WT") + ", Adresse " + CacheModel.hex8(adr);
+                + (writeBack ? "WB" : "WT") + ", Adresse " + Tex.hex8(adr);
         String antwort = "B=" + c.bloecke() + " S=" + c.saetze + " Tag/Satz/BO/Byte=" + tb + "/" + sb + "/" + bo + "/2, " + gesamt
-                + " Bit, Tag " + CacheModel.hex(tag) + " Satz " + c.satz(adr) + " BO " + c.blockOffset(adr) + " Byte " + CacheModel.byteOffset(adr);
+                + " Bit, Tag " + Tex.hex(tag) + " Satz " + c.satz(adr) + " BO " + c.blockOffset(adr) + " Byte " + CacheModel.byteOffset(adr);
         return new Part("Cache-Parameter und Adresszerlegung", a.toString(), l.toString(), frage, antwort);
     }
 
@@ -175,11 +173,11 @@ public final class CacheParameters implements Exercise {
         int tag = (adr >>> (2 + bo + sb));
         if (tag != c.tag(adr) || satz != c.satz(adr) || blockOff != c.blockOffset(adr)
                 || byteOff != CacheModel.byteOffset(adr)) {
-            throw new IllegalStateException("Interner Fehler: Zerlegung von " + CacheModel.hex8(adr));
+            throw new IllegalStateException("Interner Fehler: Zerlegung von " + Tex.hex8(adr));
         }
         int zusammen = (int) (((((long) tag << sb | satz) << bo | blockOff) << 2) | byteOff);
         if (zusammen != adr) {
-            throw new IllegalStateException("Interner Fehler: Zusammensetzen von " + CacheModel.hex8(adr));
+            throw new IllegalStateException("Interner Fehler: Zusammensetzen von " + Tex.hex8(adr));
         }
     }
 }

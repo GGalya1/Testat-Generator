@@ -76,8 +76,19 @@ public final class Tex {
         return n >= 0 ? "$" + n + "$" : "$-" + (-n) + "$";
     }
 
+    /** 32-Bit-Wert mit 8 Hexziffern; negative int-Werte als Zweierkomplement ("0xFFFFFFFC"). */
     public static String hex8(long v) {
-        return f("0x%08X", v);
+        return f("0x%08X", v & 0xFFFFFFFFL);
+    }
+
+    /** 32-Bit-Wert ohne fuehrende Nullen ("0x4C"). */
+    public static String hex(int v) {
+        return "0x" + Integer.toHexString(v).toUpperCase(Locale.ROOT);
+    }
+
+    /** Text in \texttt; % wird maskiert (sonst Kommentar in LaTeX). */
+    public static String tt(String s) {
+        return "\\texttt{" + s.replace("%", "\\%") + "}";
     }
 
     /** Assemblerzeile in \texttt, optional mit Farben je Operand. */

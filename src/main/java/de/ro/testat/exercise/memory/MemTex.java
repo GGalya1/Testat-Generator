@@ -56,8 +56,4 @@ final class MemTex {
         boolean exakt = (teil * 1000L) % ganz == 0;
         return "$" + teil + "/" + ganz + (exakt ? " = " : " \\approx ") + dez(p) + "\\,\\%$";
     }
-
-    static String tt(String s) {
-        return "\\texttt{" + s + "}";
-    }
 }

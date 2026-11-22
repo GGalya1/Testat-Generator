@@ -1,6 +1,7 @@
 package de.ro.testat.exercise.memory;
 
 import de.ro.testat.exercise.Exercise;
+import de.ro.testat.latex.Tex;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +22,7 @@ public final class WritePolicy implements Exercise {
 
     record Op(boolean schreiben, int adresse) {
         String text() {
-            return (schreiben ? "\\texttt{sw}" : "\\texttt{lw}") + " \\texttt{" + CacheModel.hex(adresse) + "}";
+            return (schreiben ? "\\texttt{sw}" : "\\texttt{lw}") + " \\texttt{" + Tex.hex(adresse) + "}";
         }
     }
 
@@ -127,7 +128,7 @@ public final class WritePolicy implements Exercise {
             if (b.dirty(s, 0)) {
                 int start = b.blockAdresse(b.inhalt(s, 0), s);
                 dirty.append(dirty.length() == 0 ? "" : ", ").append("Satz ").append(s).append(" (\\texttt{")
-                        .append(CacheModel.hex(start)).append(blockWorte > 1 ? "--" + CacheModel.hex(start + 4 * blockWorte - 1) : "")
+                        .append(Tex.hex(start)).append(blockWorte > 1 ? "--" + Tex.hex(start + 4 * blockWorte - 1) : "")
                         .append("})");
             }
         }
@@ -144,7 +145,7 @@ public final class WritePolicy implements Exercise {
 
         StringBuilder kurz = new StringBuilder();
         for (Op o : ops) {
-            kurz.append(o.schreiben() ? "sw " : "lw ").append(CacheModel.hex(o.adresse())).append("; ");
+            kurz.append(o.schreiben() ? "sw " : "lw ").append(Tex.hex(o.adresse())).append("; ");
         }
         String frage = "DM 4 Bloecke x " + blockWorte + " W: " + kurz;
         String antwort = "A: " + lesenA + " Bl gelesen, " + schreibenA + " W geschrieben; B: " + lesenB + " Bl gelesen, " + schreibenB
@@ -159,7 +160,7 @@ public final class WritePolicy implements Exercise {
                 zeilen.add(List.of(Integer.toString(i + 1), ops.get(i).text(), "", "", ""));
             } else {
                 CacheModel.Zugriff b = zb.get(i);
-                String rueck = b.verdraengtDirty() ? "ja, Tag \\texttt{" + CacheModel.hex(b.verdraengt()) + "} aus Satz " + b.satz() : "--";
+                String rueck = b.verdraengtDirty() ? "ja, Tag \\texttt{" + Tex.hex(b.verdraengt()) + "} aus Satz " + b.satz() : "--";
                 zeilen.add(List.of(Integer.toString(i + 1), ops.get(i).text(), za.get(i).hit() ? "Hit" : "Miss",
                         b.hit() ? "Hit" : "Miss", rueck));
             }

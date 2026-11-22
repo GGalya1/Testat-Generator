@@ -27,8 +27,8 @@ import java.util.regex.Pattern;
  */
 public record WerkFile(Optional<String> key, List<String> matrikel, List<String> warnings) {
 
-    /** Format der Matrikelnummer. Bei Bedarf hier anpassen (z. B. 7 Stellen). */
-    public static final Pattern MATRIKEL = Pattern.compile("\\d{6}");
+    /** Format der Matrikelnummer: 6 oder 7 Ziffern (die TU Darmstadt vergibt 7-stellige Nummern). */
+    public static final Pattern MATRIKEL = Pattern.compile("\\d{6,7}");
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\d+");
 
     public static WerkFile read(Path path) throws IOException {

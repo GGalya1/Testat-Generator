@@ -1,12 +1,12 @@
 package de.ro.testat.exercise.functions;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
 import de.ro.testat.probelauf.CInterpreter;
 import de.ro.testat.probelauf.CParser;
 import de.ro.testat.probelauf.RiscvMaschine;
 import de.ro.testat.probelauf.RiscvParser;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -45,20 +45,8 @@ public final class ArrayToAssembler implements Exercise {
 
     /** @param auswahl "zufall" oder Formen, z. B. "skalarprodukt,maximum" */
     public ArrayToAssembler(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim();
-        if (this.auswahl.equalsIgnoreCase("zufall")) {
-            pool = List.of(Form.values());
-        } else {
-            List<Form> p = new ArrayList<>();
-            for (String s : this.auswahl.split(",")) {
-                String n = s.trim().toUpperCase(Locale.ROOT).replace('-', '_');
-                Form f = Arrays.stream(Form.values()).filter(x -> x.name().equals(n) || x.name().startsWith(n)).findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Unbekannte Form fuer array: " + s + " (erlaubt: "
-                                + Arrays.stream(Form.values()).map(x -> x.name().toLowerCase(Locale.ROOT)).collect(Collectors.joining(", ")) + ")"));
-                p.add(f);
-            }
-            pool = List.copyOf(p);
-        }
+        this.auswahl = Auswahl.normal(auswahl);
+        this.pool = Auswahl.formen(auswahl, Form.class, true, "array");
     }
 
     @Override

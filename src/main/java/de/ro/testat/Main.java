@@ -51,7 +51,7 @@ public final class Main {
 
             .werk-Datei:
               erste Zeile optional ein geheimer Schluessel (muss ein Nicht-Ziffer-Zeichen enthalten),
-              danach eine Matrikelnummer (6 Ziffern) pro Zeile. # leitet Kommentare ein.
+              danach eine Matrikelnummer (6 oder 7 Ziffern) pro Zeile. # leitet Kommentare ein.
             """;
 
     public static void main(String[] args) {
@@ -142,11 +142,12 @@ public final class Main {
         }
 
         // ---------------- Erzeugen
+        String kontext = seedKontext(opt, testat);
         List<DocumentBuilder.Entry> entries = new ArrayList<>();
         List<MappingRow> rows = new ArrayList<>();
         for (String m : matrikel) {
             long seed = fixedSeeds.containsKey(m) ? fixedSeeds.get(m)
-                    : key.map(k -> SeedDeriver.derive(k, testat.id(), m)).orElseGet(SeedDeriver::random);
+                    : key.map(k -> SeedDeriver.derive(k, kontext, m)).orElseGet(SeedDeriver::random);
             List<Exercise.Part> parts = testat.generate(seed);
             entries.add(new DocumentBuilder.Entry(m, seed, parts));
             List<String> fragen = new ArrayList<>();
@@ -175,6 +176,19 @@ public final class Main {
         System.out.println("    loesungen.tex -> Loesungen (in ShareLaTeX: Menue -> Main document)");
         System.out.println("  Zuordnung:          " + csv + "   (nicht weitergeben, enthaelt Loesungen)");
         return 0;
+    }
+
+    /**
+     * Thema fuer die Seed-Ableitung: bei einer Vorlage ihre id. Bei --aufgaben gehoeren Titel und
+     * Aufgabenliste dazu - sonst haetten alle eigenen Testate dasselbe Thema "eigen", und ein
+     * Studierender bekaeme in zwei verschiedenen eigenen Testaten (z. B. Probe- und echtes Testat)
+     * an gleicher Stelle dieselbe Aufgabe.
+     */
+    static String seedKontext(Map<String, String> opt, Testat testat) {
+        if (!opt.containsKey("aufgaben")) {
+            return testat.id();
+        }
+        return "eigen|" + opt.getOrDefault("titel", "Testat").trim() + "|" + opt.get("aufgaben").trim().replaceAll("\\s+", " ");
     }
 
     private static Testat buildTestat(Map<String, String> opt) {

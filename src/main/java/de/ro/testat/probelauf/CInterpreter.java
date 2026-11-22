@@ -110,28 +110,30 @@ public final class CInterpreter {
         this.maxSchritte = maxSchritte;
     }
 
-    /** Laeuft in einem eigenen Thread mit grossem Stack, damit auch tiefe Rekursion (bis 2000 Aufrufe) geht. */
+    /**
+     * Ein wiederverwendeter Hintergrund-Thread mit grossem Stack, damit auch tiefe Rekursion (bis
+     * 2000 Aufrufe) geht. Frueher wurde fuer jeden Lauf ein neuer Thread gestartet; der Generator
+     * ruft den Interpreter aber pro Aufgabe 10-20-mal auf.
+     */
+    private static final java.util.concurrent.ExecutorService AUSFUEHRUNG =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(null, r, "c-probelauf", 512L << 20);
+                t.setDaemon(true);
+                return t;
+            });
+
     public static Ergebnis run(Programm p, int maxSchritte) {
-        Ergebnis[] out = new Ergebnis[1];
-        RuntimeException[] fehler = new RuntimeException[1];
-        Thread t = new Thread(null, () -> {
-            try {
-                out[0] = new CInterpreter(maxSchritte).lauf(p);
-            } catch (RuntimeException e) {
-                fehler[0] = e;
-            }
-        }, "c-probelauf", 512L << 20);
-        t.start();
         try {
-            t.join();
+            return AUSFUEHRUNG.submit(() -> new CInterpreter(maxSchritte).lauf(p)).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("unterbrochen", e);
+        } catch (java.util.concurrent.ExecutionException e) {
+            if (e.getCause() instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new IllegalStateException("Interner Fehler im C-Interpreter: " + e.getCause(), e.getCause());
         }
-        if (fehler[0] != null) {
-            throw fehler[0];
-        }
-        return out[0];
     }
 
     private Ergebnis lauf(Programm p) {

@@ -1,6 +1,8 @@
 package de.ro.testat.exercise.memory;
 
+import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
+import de.ro.testat.latex.Tex;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,10 +45,7 @@ public final class CacheSimulation implements Exercise {
 
     /** @param auswahl "direkt", "assoziativ", "voll" oder "zufall" */
     public CacheSimulation(String auswahl) {
-        this.auswahl = auswahl == null || auswahl.isBlank() ? "zufall" : auswahl.trim().toLowerCase(Locale.ROOT);
-        if (!List.of("zufall", "direkt", "assoziativ", "voll").contains(this.auswahl)) {
-            throw new IllegalArgumentException("cache-sim: Parameter direkt, assoziativ, voll oder zufall");
-        }
+        this.auswahl = Auswahl.variante(auswahl, "cache-sim", "direkt", "assoziativ", "voll");
     }
 
     @Override
@@ -132,7 +131,7 @@ public final class CacheSimulation implements Exercise {
             });
         }
         String frage = c.organisation() + ", " + k.kapWorte() + " W, Block " + k.blockWorte() + " W: "
-                + String.join(" ", folge.stream().map(CacheModel::hex).toList());
+                + String.join(" ", folge.stream().map(Tex::hex).toList());
         String antwort = hm + " (H=Hit, C=Compulsory, A=Capacity, K=Conflict), Miss-Rate " + misses + "/" + folge.size();
         return new Part("Cache-Zugriffe nachvollziehen", a.toString(), l.toString(), frage, antwort);
     }
@@ -262,8 +261,8 @@ public final class CacheSimulation implements Exercise {
             if (grund != null) {
                 art += ": verdr\\\"angt durch \\#" + (grund.von() + 1);
             }
-            zeilen.add(List.of("\\#" + (i + 1), "\\texttt{" + CacheModel.hex(folge.get(i)) + "}", Integer.toString(x.satz()),
-                    "\\texttt{" + CacheModel.hex(x.tag()) + "}", x.hit() ? "Hit" : "\\textbf{Miss}",
+            zeilen.add(List.of("\\#" + (i + 1), "\\texttt{" + Tex.hex(folge.get(i)) + "}", Integer.toString(x.satz()),
+                    "\\texttt{" + Tex.hex(x.tag()) + "}", x.hit() ? "Hit" : "\\textbf{Miss}",
                     art + "\\hfill\\zmark{" + praefix + "-" + i + "}"));
         }
         return "\\renewcommand{\\arraystretch}{1.3}\n" + MemTex.tabelle("|r|c|c|c|c|p{4.9cm}|",
@@ -344,12 +343,12 @@ public final class CacheSimulation implements Exercise {
         List<List<String>> zeilen = new ArrayList<>();
         for (int i = 0; i < folge.size(); i++) {
             if (z == null) {
-                zeilen.add(List.of(Integer.toString(i + 1), "\\texttt{" + CacheModel.hex(folge.get(i)) + "}", "", "", "", ""));
+                zeilen.add(List.of(Integer.toString(i + 1), "\\texttt{" + Tex.hex(folge.get(i)) + "}", "", "", "", ""));
             } else {
                 CacheModel.Zugriff x = z.get(i);
-                zeilen.add(List.of(Integer.toString(i + 1), "\\texttt{" + CacheModel.hex(folge.get(i)) + "}",
-                        Integer.toString(x.satz()), "\\texttt{" + CacheModel.hex(x.tag()) + "}", x.hit() ? "Hit" : "Miss",
-                        arten.get(i).text() + (x.verdraengt() != null ? " (verdr\\\"angt Tag \\texttt{" + CacheModel.hex(x.verdraengt()) + "})" : "")));
+                zeilen.add(List.of(Integer.toString(i + 1), "\\texttt{" + Tex.hex(folge.get(i)) + "}",
+                        Integer.toString(x.satz()), "\\texttt{" + Tex.hex(x.tag()) + "}", x.hit() ? "Hit" : "Miss",
+                        arten.get(i).text() + (x.verdraengt() != null ? " (verdr\\\"angt Tag \\texttt{" + Tex.hex(x.verdraengt()) + "})" : "")));
             }
         }
         return MemTex.tabelle("|r|c|p{1.1cm}|p{1.3cm}|p{1.6cm}|p{5.2cm}|",
@@ -377,9 +376,9 @@ public final class CacheSimulation implements Exercise {
                     z.add("leer");
                 } else {
                     int start = c.blockAdresse(t, s);
-                    String bereich = c.blockBytes == 4 ? CacheModel.hex(start)
-                            : CacheModel.hex(start) + "--" + CacheModel.hex(start + c.blockBytes - 1);
-                    z.add("\\texttt{" + CacheModel.hex(t) + "}" + (c.wege > 4 ? "" : " {\\footnotesize(" + bereich + ")}"));
+                    String bereich = c.blockBytes == 4 ? Tex.hex(start)
+                            : Tex.hex(start) + "--" + Tex.hex(start + c.blockBytes - 1);
+                    z.add("\\texttt{" + Tex.hex(t) + "}" + (c.wege > 4 ? "" : " {\\footnotesize(" + bereich + ")}"));
                 }
             }
             zeilen.add(z);
