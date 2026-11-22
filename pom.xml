@@ -45,6 +45,28 @@
                         </manifest>
                     </archive>
                 </configuration>
+                <executions>
+                    <!-- zweites, kleines jar fuer Studierende: nur der Probelauf, ohne Generator
+                         -> target/testat-generator-probelauf.jar -->
+                    <execution>
+                        <id>probelauf-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>probelauf</classifier>
+                            <includes>
+                                <include>de/ro/testat/probelauf/**</include>
+                            </includes>
+                            <archive>
+                                <manifest>
+                                    <mainClass>de.ro.testat.probelauf.Probelauf</mainClass>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -60,6 +60,8 @@ java -jar testat-generator.jar gruppe_A.werk --vorlage spruenge
 | `kontrollstrukturen` | c2asm(zufall), asm2c(zufall) |
 | `verzweigungen` | c2asm(if), asm2c(if) |
 | `schleifen` | c2asm(schleife), asm2c(schleife) |
+| `funktionen` | rekursion, aufruf, stack, array (alle zufall) – Testat 2; `shift` bei Bedarf über `--aufgaben` |
+| `speicherhierarchie` | cache-bits, cache-sim, cache-prog, amat, vm (alle zufall) – Testat 4; `schreiben` bei Bedarf über `--aufgaben` |
 | `prozessor` | eintakt, mehrtakt(zufall), hazards |
 | `prozessor-neu` | eintakt, mehrtakt-neu(zufall), hazards |
 
@@ -91,10 +93,40 @@ aus dem Katalog (`jalr`, `auipc`, `lwr`, `lwpc`, `swpc`, `lwi`, `swi`, `jrr`, `j
 | `--seed <hex> --matrikel <nr>` | ein einzelnes Blatt aus der Zuordnungsdatei neu erzeugen (mit derselben Vorlage/Kette wie damals) | – |
 | `--liste` | Vorlagen und Aufgabentypen anzeigen | – |
 
+## Probelauf für Studierende
+
+Studierende können eigenen RISC-V-Assembler- oder C-Code ausführen und sehen Syntaxfehler,
+Laufzeitfehler und die Werte am Ende. Es wird **nichts** mit einer Aufgabe verglichen und nichts
+als richtig/falsch bewertet – das entscheiden die Tutor:innen.
+
+```
+java -jar testat-generator-probelauf.jar loesung.s          # eigenes kleines jar, ohne Generator
+java -jar testat-generator-probelauf.jar loesung.txt        # Sprache wird erkannt (C: ';' oder {})
+java -jar testat-generator-probelauf.jar loesung.txt --c    # Sprache erzwingen (--asm / --c)
+java -jar testat-generator-probelauf.jar loesung.s --schritte   # jeden Befehl mit Registeränderung zeigen
+java -jar testat-generator.jar ausfuehren loesung.s         # dasselbe im Generator-jar
+```
+
+- **Assembler:** RV32I + M-Extension, Pseudobefehle (`li`, `la`, `mv`, `j`, `call`, `ret`, `beqz`,
+  `bgt`, `ble`, …), `.text`/`.data` (`.word`, `.byte`, `.asciz`, …), `ecall` (1, 4, 11, 34, 10).
+  Start wie in RARS: `sp = 0x7FFFEFFC`, `gp = 0x10008000`, sonst 0. Ausgabe: geänderte Register,
+  geschriebener Speicher, ecall-Ausgabe. Fehler: unbekannte Befehle/Register, falsche Operanden,
+  Immediate außerhalb des Bereichs, fehlende/doppelte Marken (alle auf einmal, mit Zeile);
+  nicht ausgerichteter Zugriff, ungültiger Sprung, Schrittlimit (Endlosschleife).
+- **C:** `int`-Variablen und -Arrays, Funktionen (auch rekursiv, Arrays als Parameter),
+  if/else if/else, while, do-while, for, break/continue, return, alle int-Operatoren, `printf`
+  (`%d %u %x %c`), `putchar`. Anweisungen ohne `main` und ohne Deklaration sind erlaubt (wie in den
+  Testat-Aufgaben; es gibt einen Hinweis). Fehler: erster Syntaxfehler mit Zeile/Spalte; zur
+  Laufzeit Lesen ohne Wert, nicht deklarierte Variable, Division durch 0, Index außerhalb,
+  Endlosschleife, zu tiefe Rekursion.
+- Beispiele: `beispiel/probelauf_beispiel.s`, `beispiel/probelauf_beispiel.c`.
+- Kontrolle: `ProbelaufTest` führt alle vom Generator erzeugten Assembler- und C-Programme
+  (6 Formen × 400 Seeds) im Probelauf aus und vergleicht mit dem Interpreter des Generators.
+
 ## Für Entwickler:innen
 
 ```
-mvn package          # baut target/testat-generator.jar und führt die Tests aus
+mvn package          # baut target/testat-generator.jar (+ target/testat-generator-probelauf.jar) und führt die Tests aus
 mvn test             # nur Tests
 ```
 
@@ -110,10 +142,14 @@ de.ro.testat
 ├── exercise/             Exercise-Interface, Exercises (Verzeichnis fuer --aufgaben)
 │   ├── encoding/         AsmToMachineCode, MachineCodeToAsm + LaTeX dazu
 │   ├── control/          CToAssembler, AssemblerToC, Generator, Interpreter, Simulator
+│   ├── functions/        RecursionToAssembler, CallToAssembler, StackTrace, ArrayToAssembler, ShiftArithmetic (Testat 2)
+│   ├── memory/           CacheParameters, CacheSimulation, CacheProgram, AccessTime, WritePolicy, VirtualMemory (Testat 4)
 │   └── cpu/              SingleCycleTiming, MulticycleFsm, NewInstructionFsm, Datapath, PipelineHazards
 ├── rv/                   RISC-V: Formate, Befehle, Kodierung, Zufallsoperanden
 ├── latex/                LaTeX-Hilfen, TikZ-Schemata, Projektaufbau (DocumentBuilder)
-└── io/                   .werk-Datei, Seeds, Zip + Zuordnung
+├── io/                   .werk-Datei, Seeds, Zip + Zuordnung
+└── probelauf/            Probelauf für Studierende: RiscvParser/RiscvMaschine, CParser/CInterpreter
+                          (unabhängig vom Rest, eigenes jar)
 ```
 
 ### Neue Vorlage
@@ -178,6 +214,42 @@ ProgramGenerator ──► Program (AST) ──► Interpreter ──► Endwert
   (Prüfung oben/unten, Sprung bei wahr/falsch) sind zufällig. Marken heißen `L1`, `L2`, …
 - C → RISC-V: Die Musterlösung sichert ein benötigtes Hilfsregister auf dem Stack.
 - Die Aufgaben bestehen nur aus der Aufgabenstellung; es gibt keine Zusatz- oder Theoriefragen.
+
+### Funktionen und Speicher (`exercise.functions`, Testat 2)
+
+| Aufgabe | Zufällig | Gefragt | Selbstkontrolle |
+|---|---|---|---|
+| `rekursion` – Rekursive Funktion in RISC-V | Form (12 Stück, Parameter `rekursion:<form>`): prod, summe, linear, fib, fib_mul (klassisch, ein Argument), potenz (x, n), ggt (Euklid oder Anzahl Schritte), ziffern (Ziffernsumme/-anzahl zur Basis 10, 8, 5), bits (`n & m`, `n >> s`), collatz (zwei Aufrufstellen), binom (zwei Argumente, zwei Aufrufe, 3 s-Register), bereich (a..b); Konstanten, Name, Argumente für main | Funktion nach Aufrufkonvention + Hauptprogramm | Werte aus dem C-Interpreter; Musterlösung im Simulator für alle Kontrollargumente, auch im strengen Modus; `sp` und s0–s11 unverändert |
+| `aufruf` – Funktionsaufrufe in RISC-V | Blattfunktion g (if/else, max/min/Abstand, for-Summe, wiederholtes Abziehen, Begrenzen, Potenz-Schleife) × Aufrufer f (`summe`: for mit s += g(..), `zaehlen`: if (g(..) > K), `iteration`: x = g(x) bis x ≤ K, `zwei_aufrufe`: u = g(..), v = g(..), if/else, `bedingt`: while mit g nur bei geraden/ungeraden n); Konstanten, Argumentausdrücke, Namen | g und f nach Aufrufkonvention + Hauptprogramm | wie `rekursion`; Kombinationen, die nicht schnell enden oder zu große Werte liefern, werden verworfen |
+| `stack` – Stack nachvollziehen | Funktion (eine Rekursion), n, Start-`sp`, Start-`s0` | `sp` und Stackinhalt beim ersten Basisfall (Haltepunkt), Ergebnis | Simulator-Haltepunkt == erwarteter Aufbau der Stackrahmen |
+| `array` – Arrays im Speicher | Form (Skalarprodukt, Summe > k, Maximum, Zählen, Umrechnen, Umdrehen, Präfixsumme), Werte | C-Schleife → RISC-V mit `la`/`lw`/`sw` | Simulator == C-Interpreter (Probelauf) |
+| `shift` – Multiplikation/Division durch Shift | n·c (zwei Bits), n·c (2^p − 2^q), n / 2^k | ohne `mul`/`div` | Simulator == Java-Arithmetik für viele n (inkl. negative, MIN/MAX) |
+
+**Strenger Modus.** `RiscvMaschine.runStreng` überschreibt bei jedem Rücksprung (`jalr zero, 0(ra)`) alle Register,
+die eine Funktion nicht erhalten muss (t0–t6, a1–a7), mit Zufallswerten. Eine Lösung, die sich nach einem Aufruf noch auf
+ein t- oder a-Register verlässt, fällt dabei auf, auch wenn die aufgerufene Funktion das Register zufällig nicht verändert.
+`ConventionCheck.pruefe` lässt jede Musterlösung normal und zweimal streng laufen.
+
+Die Musterlösungen verwenden nur echte Befehle (`addi` statt `li`, `jal ra` statt `call`, `jalr zero, 0(ra)` statt `ret`),
+damit die Adressen im Listing der Stack-Aufgabe genau wie in RARS stimmen. `RecursiveFunction`, `RecursionForms`, `CallChain`, `ConventionCheck` und `AsmText` sind
+Hilfsklassen; geprüft wird mit dem Simulator aus `probelauf`.
+
+### Speicherhierarchie (`exercise.memory`, Testat 4)
+
+Grundlage ist Harris & Harris, Kap. 8: 32-Bit-Byteadressen, Wörter zu 4 Byte, Adresse = Tag | Satz | Block-Offset | Byte-Offset,
+Ersetzung LRU (neuer Block in den freien Weg mit der kleinsten Nummer), Misses eingeteilt in Compulsory (erster Zugriff auf den
+Block), Capacity (auch ein gleich großer voll assoziativer LRU-Cache verfehlt) und Conflict (Rest).
+
+| Aufgabe | Zufällig | Gefragt | Selbstkontrolle |
+|---|---|---|---|
+| `cache-bits` – Cache-Parameter | Kapazität 1–256 KiB, Block 8–64 Byte, N (direkt, 2/4/8-fach, voll bis 4 KiB), Write-Back/-Through, Adresse; Parameter `vorwaerts`/`rueckwaerts` | B, S, Bitbreiten, Speicherbedarf in Bit, Zerlegung einer Adresse; rückwärts: aus der Aufteilung Block, S, B, Kapazität und Aufteilung bei doppeltem N | Zerlegung per Division == per Bitmaske, ergibt zusammengesetzt die Adresse |
+| `cache-sim` – Zugriffsfolge | kleiner Cache (8/16 Wörter, Block 1–4 Wörter), Parameter `direkt`/`assoziativ`/`voll`; 10–12 Adressen mit Konflikten und Lokalität | Satz, Tag, Hit/Miss, Miss-Art je Zugriff, Endinhalt, Miss-Rate | zweite, anders geschriebene LRU-Simulation; Folge muss Hits, Verdrängung und Conflict- (bzw. Capacity-) Misses enthalten |
+| `cache-prog` – Miss-Rate eines Programms | `schleife`: RISC-V-Schleife mit festen `lw`-Adressen (wie H&H 8.3), `array`: C-Schleife über zwei Arrays mit/ohne Satzkonflikt | Miss-Rate für Cache A (direkt) und B (2-fach bzw. voll), Anzahl je Miss-Art | Adressfolge des Modells == Speicherzugriffe, die der RISC-V-Simulator beim Ausführen aufzeichnet |
+| `amat` – mittlere Zugriffszeit | t, Miss-Raten, L2, Hauptspeicher, Ziel-AMAT, Anteil Lade-/Speicherbefehle, Takt | AMAT mit L1, mit L2, nötige Miss-Rate, CPI und Laufzeit | exakt mit BigDecimal, zweite Rechnung in ganzen Zahlen |
+| `schreiben` – Schreibstrategien | 4 Blöcke à 1–2 Wörter, 8–10 `lw`/`sw` | Hit/Miss bei Write-Through/no-allocate und Write-Back/allocate, Rückschreiben, Zahl der Speicherzugriffe, Dirty-Blöcke | eigene Zählung über Tabelle Satz → (Tag, dirty) und Invarianten |
+| `vm` – virtueller Speicher | physische Adressbreite 24–30 Bit, Seiten 1–16 KiB, Seitentabellen-Ausschnitt, TLB | Offset/VPN/PPN, Seitenzahlen, Größe der Seitentabelle, Übersetzung (TLB-Treffer, Seitentabelle, Seitenfehler) | Übersetzung per Bits == per Division, TLB passt zur Seitentabelle |
+
+Die Lehrbuchwerte aus H&H (Schleife 5 × `lw 0x4, 0xC, 0x8` → 3/15; `lw 0x4, 0x24` → 10/10 direkt, 2/10 2-fach) sind als Tests hinterlegt.
 
 ### Prozessor (`exercise.cpu`)
 

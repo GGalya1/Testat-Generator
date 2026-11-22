@@ -29,6 +29,7 @@ import java.util.Optional;
  *   java -jar testat-generator.jar gruppe_A.werk --aufgaben "asm2bin:B,J bin2asm:R"
  *   java -jar testat-generator.jar --seed 1a2b... --matrikel 123456 --vorlage spruenge
  *   java -jar testat-generator.jar --liste
+ *   java -jar testat-generator.jar ausfuehren loesung.s                       (Probelauf fuer eigenen Code)
  * </pre>
  */
 public final class Main {
@@ -38,6 +39,7 @@ public final class Main {
               java -jar testat-generator.jar <datei.werk> [Optionen]
               java -jar testat-generator.jar --seed <hex> --matrikel <nr> [Optionen]
               java -jar testat-generator.jar --liste
+              java -jar testat-generator.jar ausfuehren <datei.s|datei.c|datei.txt>   (Probelauf, siehe ausfuehren -h)
 
             Optionen:
               --vorlage <id>       fertige Vorlage (Standard: kodierung), siehe --liste
@@ -65,6 +67,9 @@ public final class Main {
     }
 
     static int run(String[] args) throws Exception {
+        if (args.length > 0 && args[0].equals("ausfuehren")) {
+            return de.ro.testat.probelauf.Probelauf.run(java.util.Arrays.copyOfRange(args, 1, args.length));
+        }
         Map<String, String> opt = new HashMap<>();
         String werkArg = null;
         for (int i = 0; i < args.length; i++) {

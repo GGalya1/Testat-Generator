@@ -3,6 +3,17 @@ package de.ro.testat.exercise;
 import de.ro.testat.exercise.control.AssemblerToC;
 import de.ro.testat.exercise.control.CToAssembler;
 import de.ro.testat.exercise.cpu.MulticycleFsm;
+import de.ro.testat.exercise.functions.ArrayToAssembler;
+import de.ro.testat.exercise.functions.CallToAssembler;
+import de.ro.testat.exercise.memory.AccessTime;
+import de.ro.testat.exercise.memory.CacheParameters;
+import de.ro.testat.exercise.memory.CacheProgram;
+import de.ro.testat.exercise.memory.CacheSimulation;
+import de.ro.testat.exercise.memory.VirtualMemory;
+import de.ro.testat.exercise.memory.WritePolicy;
+import de.ro.testat.exercise.functions.RecursionToAssembler;
+import de.ro.testat.exercise.functions.ShiftArithmetic;
+import de.ro.testat.exercise.functions.StackTrace;
 import de.ro.testat.exercise.cpu.NewInstructionFsm;
 import de.ro.testat.exercise.cpu.PipelineHazards;
 import de.ro.testat.exercise.cpu.SingleCycleTiming;
@@ -36,6 +47,25 @@ public final class Exercises {
         register("mehrtakt", "Mehrtakt-Steuerwerk erweitern, Parameter: Befehle/Klassen (z. B. sw,beq,mul oder R,I)", MulticycleFsm::new);
         register("mehrtakt-neu", "Neuer (ausgedachter) Befehl ins Mehrtakt-Steuerwerk, Parameter: Befehle (z. B. jalm,lwi) oder zufall",
                 NewInstructionFsm::new);
+        register("rekursion", "Rekursive C-Funktion nach RISC-V (Aufrufkonvention, Stack), Parameter: prod, summe, linear, fib, "
+                + "fib_mul, potenz, ggt, ziffern, bits, collatz, binom, bereich oder zufall", RecursionToAssembler::new);
+        register("aufruf", "Nicht rekursive Funktionen (Blattfunktion + Aufrufer mit Schleife/Bedingung) nach RISC-V, "
+                + "Parameter: summe, zaehlen, iteration, zwei_aufrufe, bedingt oder zufall", CallToAssembler::new);
+        register("stack", "Stackinhalt bei rekursiver Funktion nachvollziehen, ohne Parameter", arg -> new StackTrace());
+        register("array", "Array-Schleife C -> RISC-V, Parameter: skalarprodukt, summe_groesser, maximum, zaehlen, umrechnen, "
+                + "umdrehen, praefixsumme oder zufall", ArrayToAssembler::new);
+        register("shift", "Multiplikation/Division durch Shift, ohne Parameter", arg -> new ShiftArithmetic());
+        register("cache-bits", "Cache: Bloecke, Saetze, Bitbreiten, Speicherbedarf, Adresszerlegung; Parameter: vorwaerts, "
+                + "rueckwaerts oder zufall", CacheParameters::new);
+        register("cache-sim", "Cache-Zugriffsfolge: Satz, Tag, Hit/Miss, Miss-Art, Endinhalt, Miss-Rate; Parameter: direkt, "
+                + "assoziativ, voll oder zufall", CacheSimulation::new);
+        register("cache-prog", "Miss-Rate einer Schleife (RISC-V) oder Array-Schleife (C) fuer zwei Caches; Parameter: schleife, "
+                + "array oder zufall", CacheProgram::new);
+        register("amat", "Mittlere Zugriffszeit mit L1/L2, noetige Miss-Rate, CPI mit Speicher-Stalls (ohne Parameter)", arg -> new AccessTime());
+        register("schreiben", "Write-Through/no-allocate vs. Write-Back/allocate: Hits, Speicherzugriffe, Dirty-Bloecke (ohne Parameter)",
+                arg -> new WritePolicy());
+        register("vm", "Virtueller Speicher: Offset/VPN/PPN, Seitentabellengroesse, Uebersetzung mit TLB (ohne Parameter)",
+                arg -> new VirtualMemory());
         register("hazards", "Pipeline: RAW, nops, Forwarding/Stalls, Umordnung (ohne Parameter)", arg -> new PipelineHazards());
     }
 

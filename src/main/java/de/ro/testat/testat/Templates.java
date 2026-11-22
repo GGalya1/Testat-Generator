@@ -3,6 +3,15 @@ package de.ro.testat.testat;
 import de.ro.testat.exercise.control.AssemblerToC;
 import de.ro.testat.exercise.control.CToAssembler;
 import de.ro.testat.exercise.cpu.MulticycleFsm;
+import de.ro.testat.exercise.functions.ArrayToAssembler;
+import de.ro.testat.exercise.functions.CallToAssembler;
+import de.ro.testat.exercise.memory.AccessTime;
+import de.ro.testat.exercise.memory.CacheParameters;
+import de.ro.testat.exercise.memory.CacheProgram;
+import de.ro.testat.exercise.memory.CacheSimulation;
+import de.ro.testat.exercise.memory.VirtualMemory;
+import de.ro.testat.exercise.functions.RecursionToAssembler;
+import de.ro.testat.exercise.functions.StackTrace;
 import de.ro.testat.exercise.cpu.NewInstructionFsm;
 import de.ro.testat.exercise.cpu.PipelineHazards;
 import de.ro.testat.exercise.cpu.SingleCycleTiming;
@@ -68,6 +77,24 @@ public final class Templates {
         register("schleifen", () -> Testat.builder("schleifen", "Schleifen")
                 .add(new CToAssembler("schleife"))
                 .add(new AssemblerToC("schleife"))
+                .build());
+
+        // Funktionen & Speicher (Testat 2): Rekursion, Funktionsaufruf, Stack, Arrays; "shift" bei Bedarf per --aufgaben
+        register("funktionen", () -> Testat.builder("funktionen", "Funktionen und Speicher")
+                .add(new RecursionToAssembler())
+                .add(new CallToAssembler())
+                .add(new StackTrace())
+                .add(new ArrayToAssembler())
+                .build());
+
+        // Speicherhierarchie (Testat 4): Cache-Parameter, Zugriffsfolge, Programm, AMAT, virtueller Speicher;
+        // "schreiben" (Schreibstrategien) bei Bedarf per --aufgaben
+        register("speicherhierarchie", () -> Testat.builder("speicherhierarchie", "Speicherhierarchie")
+                .add(new CacheParameters())
+                .add(new CacheSimulation())
+                .add(new CacheProgram())
+                .add(new AccessTime())
+                .add(new VirtualMemory())
                 .build());
 
         // Prozessor (wie das bisherige Testat 2): Eintakt-Timing, Mehrtakt-FSM, Pipeline-Konflikte
