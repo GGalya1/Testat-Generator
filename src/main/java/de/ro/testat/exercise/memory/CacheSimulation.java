@@ -30,6 +30,16 @@ public final class CacheSimulation implements Exercise {
         CacheModel cache() {
             return new CacheModel(4 * kapWorte, 4 * blockWorte, wege);
         }
+
+        /**
+         * Ausdruecklich, weil daraus die Namen der Pfeil-Marken entstehen: Den automatischen
+         * hashCode eines record legt Java nicht fest, TeaVM (Browser) rechnet ihn anders als das JDK.
+         * Die Formel ist die des JDK, auf der JVM aendert sich also nichts (MemoryTest.konfigHashWieJdkRecord).
+         */
+        @Override
+        public int hashCode() {
+            return (kapWorte * 31 + blockWorte) * 31 + wege;
+        }
     }
 
     static final List<Konfig> DIREKT = List.of(new Konfig(8, 1, 1), new Konfig(8, 2, 1), new Konfig(16, 2, 1), new Konfig(16, 4, 1));

@@ -103,4 +103,22 @@ class MemoryTest {
         }
         return f;
     }
+
+    /** Vergleich: ein record ohne eigenen hashCode, also mit dem automatischen des JDK. */
+    private record OhneEigenenHash(int kapWorte, int blockWorte, int wege) {
+    }
+
+    @Test
+    void konfigHashWieJdkRecord() {
+        List<CacheSimulation.Konfig> alle = new ArrayList<>(CacheSimulation.DIREKT);
+        alle.addAll(CacheSimulation.ASSOZIATIV);
+        alle.addAll(CacheSimulation.VOLL);
+        Random r = new Random(7);
+        for (int i = 0; i < 1000; i++) {
+            alle.add(new CacheSimulation.Konfig(r.nextInt(), r.nextInt(), r.nextInt()));
+        }
+        for (CacheSimulation.Konfig k : alle) {
+            assertEquals(new OhneEigenenHash(k.kapWorte(), k.blockWorte(), k.wege()).hashCode(), k.hashCode(), k.toString());
+        }
+    }
 }
