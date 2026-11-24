@@ -1,11 +1,12 @@
 package de.ro.testat.exercise.control;
 
+import de.ro.testat.testat.JdkRandom;
+
 import de.ro.testat.exercise.Exercise;
 import de.ro.testat.exercise.control.Ast.Program;
 import de.ro.testat.exercise.control.Ast.Var;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +46,7 @@ abstract class ControlExercise implements Exercise {
         Interpreter.Result res = Interpreter.run(p);
 
         List<String> pool = new ArrayList<>(VAR_REGS);
-        Collections.shuffle(pool, rng);
+        JdkRandom.mischen(pool, rng);
         Map<String, String> regs = new LinkedHashMap<>();
         for (int i = 0; i < p.vars().size(); i++) {
             regs.put(p.vars().get(i).name(), pool.get(i));

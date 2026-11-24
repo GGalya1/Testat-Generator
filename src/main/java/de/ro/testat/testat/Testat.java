@@ -74,7 +74,7 @@ public final class Testat {
     public List<Exercise.Part> generate(long seed) {
         List<Exercise.Part> parts = new ArrayList<>();
         for (int i = 0; i < exercises.size(); i++) {
-            parts.add(exercises.get(i).generate(new Random(subSeed(seed, i))));
+            parts.add(exercises.get(i).generate(new JdkRandom(subSeed(seed, i))));
         }
         return List.copyOf(parts);
     }

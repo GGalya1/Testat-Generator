@@ -1,10 +1,11 @@
 package de.ro.testat.exercise.memory;
 
+import de.ro.testat.testat.JdkRandom;
+
 import de.ro.testat.exercise.Exercise;
 import de.ro.testat.latex.Tex;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ public final class VirtualMemory implements Exercise {
         // Uebersetzungen: 1 TLB-Treffer, 2 nur Seitentabelle, 1 Seitenfehler
         List<Eintrag> ziele = new ArrayList<>(List.of(gueltig.get(rng.nextInt(2)), gueltig.get(2), gueltig.get(3),
                 ungueltig.get(rng.nextInt(2))));
-        Collections.shuffle(ziele, rng);
+        JdkRandom.mischen(ziele, rng);
         List<Integer> va = new ArrayList<>();
         for (Eintrag e : ziele) {
             va.add((int) (((long) e.vpn() << off) | rng.nextInt((int) seite)));

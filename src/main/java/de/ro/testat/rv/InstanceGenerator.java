@@ -1,7 +1,8 @@
 package de.ro.testat.rv;
 
+import de.ro.testat.testat.JdkRandom;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -16,7 +17,7 @@ public final class InstanceGenerator {
 
     public static Instance generate(Mnemonic mn, Random rng) {
         List<Integer> pool = new ArrayList<>(Registers.POOL);
-        Collections.shuffle(pool, rng);
+        JdkRandom.mischen(pool, rng);
         int a = pool.get(0), b = pool.get(1), c = pool.get(2);
 
         return switch (mn.format()) {

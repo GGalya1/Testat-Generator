@@ -1,5 +1,7 @@
 package de.ro.testat.exercise.memory;
 
+import de.ro.testat.testat.JdkRandom;
+
 import de.ro.testat.exercise.Auswahl;
 import de.ro.testat.exercise.Exercise;
 import de.ro.testat.latex.Tex;
@@ -75,7 +77,7 @@ public final class CacheProgram implements Exercise {
                 adr.add(4 * rng.nextInt(kapWorte * 4));
             }
             List<Integer> lade = new ArrayList<>(adr);
-            java.util.Collections.shuffle(lade, rng);
+            JdkRandom.mischen(lade, rng);
             List<Integer> folge = new ArrayList<>();
             for (int i = 0; i < n; i++) {
                 folge.addAll(lade);

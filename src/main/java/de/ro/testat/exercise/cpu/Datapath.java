@@ -1,5 +1,7 @@
 package de.ro.testat.exercise.cpu;
 
+import de.ro.testat.testat.JdkRandom;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -315,7 +317,7 @@ final class Datapath {
 
     /** Fuehrt Fetch, Decode und die Folge aus und vergleicht mit der Wirkung des Befehls. */
     static boolean simulate(Goal g, List<Step> steps, long seed) {
-        Random r = new Random(seed);
+        Random r = new JdkRandom(seed);
         int pc = 4 * r.nextInt(1 << 16);
         int rs1 = r.nextInt();
         int rs2 = r.nextInt();
