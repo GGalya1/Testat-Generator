@@ -2,6 +2,7 @@ package de.ro.testat.exercise.control;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -50,7 +51,8 @@ public enum Shape {
                                 + " (erlaubt: zufall, if, schleife, " + ids() + ")")));
             }
         }
-        return out.stream().distinct().toList();
+        // LinkedHashSet statt stream().distinct(): distinct() entfernt in TeaVM (Browser) keine Doppelten
+        return List.copyOf(new LinkedHashSet<>(out));
     }
 
     public static List<String> ids() {

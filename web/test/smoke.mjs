@@ -64,7 +64,7 @@ for (const zeile of readFileSync(referenz, "utf8").split("\n")) {
   zeiten.set(name, z);
   if (aus === f.ausgabe) ok++;
   else {
-    fehler.push(`${name} (Seed ${f.seed}): ${unterschied(f.ausgabe, aus)}`);
+    fehler.push({ name, text: `${name} (Seed ${f.seed}): ${unterschied(f.ausgabe, aus)}` });
     if (!ersterFehlerFall && aus.startsWith('{"ok":false')) ersterFehlerFall = f;
   }
 }
@@ -93,8 +93,13 @@ if (ersterFehlerFall) {
   }
 }
 if (fehler.length) {
-  console.log(`\n${fehler.length} Abweichungen (hoechstens 15 gezeigt):`);
-  for (const f of fehler.slice(0, 15)) console.log("- " + f);
+  // je Vorlage/Aufgabentyp nur die erste Abweichung, damit verschiedene Ursachen sichtbar werden
+  const erste = new Map();
+  for (const f of fehler) if (!erste.has(f.name)) erste.set(f.name, f.text);
+  const betroffen = [...new Set(fehler.map((f) => f.name))];
+  console.log(`\n${fehler.length} Abweichungen in ${betroffen.length} Vorlagen/Aufgabentypen: ${betroffen.join(", ")}`);
+  console.log("Je eine davon:");
+  for (const t of erste.values()) console.log("- " + t);
   process.exit(1);
 }
 if (!beispiel.ok) {

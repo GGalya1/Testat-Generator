@@ -3,8 +3,10 @@ package de.ro.testat.testat;
 import de.ro.testat.exercise.Exercise;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -60,7 +62,12 @@ public final class Testat {
 
     /** Alle Praeambel-Zeilen der Aufgaben, ohne Doppelte, in Reihenfolge des ersten Auftretens. */
     public List<String> preamble() {
-        return exercises.stream().flatMap(e -> e.preamble().stream()).distinct().toList();
+        // LinkedHashSet statt stream().distinct(): distinct() entfernt in TeaVM (Browser) keine Doppelten
+        Set<String> zeilen = new LinkedHashSet<>();
+        for (Exercise e : exercises) {
+            zeilen.addAll(e.preamble());
+        }
+        return List.copyOf(zeilen);
     }
 
     /** Erzeugt alle Aufgaben fuer einen Seed. */
