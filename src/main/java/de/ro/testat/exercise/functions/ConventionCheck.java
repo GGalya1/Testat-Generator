@@ -8,7 +8,6 @@ import de.ro.testat.probelauf.RiscvParser;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
 
 /**
  * Gemeinsame Bausteine fuer Funktionsaufgaben: Stackrahmen (Prolog/Epilog), Hauptprogramm,
@@ -34,10 +33,10 @@ final class ConventionCheck {
 
     static void prolog(AsmText t, int anzahlS) {
         int r = rahmen(anzahlS);
-        StringJoiner was = new StringJoiner(", ");
-        was.add("ra");
+        // StringBuilder statt StringJoiner: StringJoiner gibt es in TeaVM nicht
+        StringBuilder was = new StringBuilder("ra");
         for (int i = 0; i < anzahlS; i++) {
-            was.add("s" + i);
+            was.append(", s").append(i);
         }
         t.b("addi sp, sp, -" + r, "Platz fuer " + was);
         t.b("sw   ra, " + (r - 4) + "(sp)", "Ruecksprungadresse sichern");
@@ -83,11 +82,11 @@ final class ConventionCheck {
     }
 
     static String aufruf(String name, int[] args) {
-        StringJoiner j = new StringJoiner(", ", name + "(", ")");
-        for (int a : args) {
-            j.add(Integer.toString(a));
+        StringBuilder j = new StringBuilder(name).append('(');
+        for (int i = 0; i < args.length; i++) {
+            j.append(i > 0 ? ", " : "").append(args[i]);
         }
-        return j.toString();
+        return j.append(')').toString();
     }
 
     /**

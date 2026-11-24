@@ -317,12 +317,15 @@ public final class RiscvRenderer {
         if (s == null) {
             return null;
         }
+        // von Hand statt appendReplacement/appendTail: die StringBuilder-Varianten gibt es in TeaVM nicht
         Matcher m = LABEL.matcher(s);
         StringBuilder sb = new StringBuilder();
+        int bis = 0;
         while (m.find()) {
-            m.appendReplacement(sb, names.getOrDefault(m.group(), m.group()));
+            sb.append(s, bis, m.start()).append(names.getOrDefault(m.group(), m.group()));
+            bis = m.end();
         }
-        m.appendTail(sb);
+        sb.append(s, bis, s.length());
         return sb.toString();
     }
 
