@@ -36,16 +36,19 @@ public final class DocumentBuilder {
     /** Statische Dateien, die unveraendert ins Projekt kopiert werden. */
     private static final List<String> RESOURCES = List.of("praeambel.tex", "kopf.tex", "riscv.tex");
 
-    /** Klassenoptionen wie in der TU-Vorlage; %s = true/false fuer die Loesungen. */
+    /**
+     * Klassenoptionen wie in der TU-Vorlage; LOESUNG = true/false fuer die Loesungen.
+     * Ohne String.format: das "%%" darin bringt den Formatter von TeaVM (Browser) durcheinander.
+     */
     private static final String DOCUMENTCLASS = """
             \\documentclass[
                 german,
-                points=true,%% fuer die Aktivierung der Punktereferenzen, funktioniert nicht fuer TeX Versionen vor 2020
+                points=true,% fuer die Aktivierung der Punktereferenzen, funktioniert nicht fuer TeX Versionen vor 2020
                 match-task-subtask-syntax,
                 accentcolor=TUDa-2b,
                 textaccentcolor=TUDa-2b,
                 identbarcolor=TUDa-2b,
-                solution=%s
+                solution=LOESUNG
             ]{tudaexercise}
             """;
 
@@ -94,7 +97,7 @@ public final class DocumentBuilder {
     }
 
     private static String document(boolean solution, CharSequence body) {
-        return f(DOCUMENTCLASS, solution) + "\\input{praeambel}\n\n\\begin{document}\n" + body + "\\end{document}\n";
+        return DOCUMENTCLASS.replace("LOESUNG", Boolean.toString(solution)) + "\\input{praeambel}\n\n\\begin{document}\n" + body + "\\end{document}\n";
     }
 
     /** Ein Blatt: Titelbox mit Matrikelnummer, dann die Aufgaben in tudaexercise-Umgebungen. */
