@@ -34,13 +34,14 @@
       <fieldset class="modus">
         <legend>Was soll auf das Blatt?</legend>
         <div class="umschalter" role="radiogroup">
-          <label><input type="radio" name="modus" value="vorlage" checked> Fertige Vorlage</label>
+          <label><input type="radio" name="modus" value="vorlage" checked> Ganzes Testat</label>
           <label><input type="radio" name="modus" value="eigen"> Eigene Auswahl</label>
         </div>
       </fieldset>
 
       <section id="bereich-vorlage" class="bereich">
-        <div id="vorlagen" class="vorlagen">
+        <p class="bereich-hinweis">Welches Testat möchten Sie üben? Das Blatt enthält alle Aufgaben, die auf der Karte stehen.</p>
+        <div id="vorlagen" class="testate" role="radiogroup" aria-label="Testat">
           <p class="laden">Generator wird geladen …</p>
         </div>
       </section>
@@ -87,11 +88,12 @@
     </footer>
   </main>
 
-  <template id="vorlage-zeile">
-    <label class="vorlage">
+  <template id="testat-karte">
+    <label class="testat">
       <input type="radio" name="vorlage">
-      <span class="v-titel"></span>
-      <span class="v-text"></span>
+      <span class="t-nr"></span>
+      <span class="t-titel"></span>
+      <span class="t-aufgaben"></span>
     </label>
   </template>
 

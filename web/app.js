@@ -1,38 +1,23 @@
 // Bedienung der Seite. Die eigentliche Arbeit macht generator-kern.js (im Web Worker).
 
-// Zuordnung zu den vier Testaten (wie in KONTEXT.md). Unbekanntes landet unter "Weitere".
+// Die vier Testate. "vorlage" ist die Vorlage aus Templates.java, die das ganze Testat erzeugt;
+// "aufgaben" steht so auf der Karte (Reihenfolge wie auf dem Blatt).
+// "typen" ordnet die Aufgabentypen fuer "Eigene Auswahl"; Unbekanntes landet unter "Weitere".
 const TESTATE = [
-  { name: "Testat 1: Grundlagen Assembler",
-    vorlagen: ["kodierung", "kodierung-stufen", "spruenge", "speicher", "kontrollstrukturen", "verzweigungen", "schleifen"],
+  { nr: 1, titel: "Grundlagen Assembler", vorlage: "grundlagen",
+    aufgaben: ["Assembler → Maschinencode", "Maschinencode → Assembler", "C → RISC-V", "RISC-V → C"],
     typen: ["asm2bin", "bin2asm", "c2asm", "asm2c"] },
-  { name: "Testat 2: Funktionen und Speicher",
-    vorlagen: ["funktionen"], typen: ["rekursion", "aufruf", "stack", "array", "shift"] },
-  { name: "Testat 3: Prozessor",
-    vorlagen: ["prozessor", "prozessor-neu"], typen: ["eintakt", "mehrtakt", "mehrtakt-neu", "hazards"] },
-  { name: "Testat 4: Speicherhierarchie",
-    vorlagen: ["speicherhierarchie"], typen: ["cache-bits", "cache-sim", "cache-prog", "amat", "schreiben", "vm"] },
+  { nr: 2, titel: "Funktionen und Speicher", vorlage: "funktionen",
+    aufgaben: ["Rekursive Funktion in RISC-V", "Funktionsaufruf", "Stackinhalt", "Schleife über ein Array"],
+    typen: ["rekursion", "aufruf", "stack", "array", "shift"] },
+  { nr: 3, titel: "Prozessor", vorlage: "prozessor",
+    aufgaben: ["Eintakt-Prozessor: Timing", "Mehrtakt-Steuerwerk erweitern", "Pipeline-Konflikte"],
+    typen: ["eintakt", "mehrtakt", "mehrtakt-neu", "hazards"] },
+  { nr: 4, titel: "Speicherhierarchie", vorlage: "speicherhierarchie",
+    aufgaben: ["Cache-Parameter", "Zugriffsfolge im Cache", "Miss-Rate eines Programms", "Mittlere Zugriffszeit (AMAT)",
+               "Virtueller Speicher"],
+    typen: ["cache-bits", "cache-sim", "cache-prog", "amat", "schreiben", "vm"] },
 ];
-
-// Kurzbeschreibung je Vorlage (aus den Kommentaren in Templates.java)
-const VORLAGE_TEXT = {
-  "kodierung": "Assembler in Maschinencode und zurück, beliebiger Befehl",
-  "kodierung-stufen": "Kodieren in drei Stufen (R/I, dann S/Load/Shift, dann B/J) und einmal dekodieren",
-  "spruenge": "Schwerpunkt Sprünge und Verzweigungen",
-  "speicher": "Schwerpunkt Speicherzugriffe: Store kodieren, Load dekodieren",
-  "kontrollstrukturen": "C nach RISC-V und RISC-V nach C, beliebige Kontrollstruktur",
-  "verzweigungen": "Nur Verzweigungen: if, if-else, else if",
-  "schleifen": "Nur Schleifen: while, for, do-while",
-  "funktionen": "Rekursion, Funktionsaufruf, Stackinhalt, Array-Schleife",
-  "prozessor": "Eintakt-Timing, Mehrtakt-Steuerwerk erweitern, Pipeline-Konflikte",
-  "prozessor-neu": "Wie „Prozessor“, aber ein neuer, ausgedachter Befehl im Mehrtakt-Steuerwerk",
-  "speicherhierarchie": "Cache-Parameter, Zugriffsfolge, Miss-Rate eines Programms, AMAT, virtueller Speicher",
-};
-
-// Anzeige-Titel, wo zwei Vorlagen dieselbe Ueberschrift auf dem Blatt haben
-const VORLAGE_TITEL = {
-  "kodierung-stufen": "Befehlskodierung in Stufen",
-  "prozessor-neu": "Prozessor mit neuem Befehl",
-};
 
 const MAX_AUFGABEN = 12;
 const MAX_BLAETTER = 10;
@@ -113,44 +98,44 @@ function pfeile(text) {
   return text.replace(/->/g, "→");
 }
 
-function gruppiert(ids, feld) {
-  const gruppen = TESTATE.map((t) => ({ name: t.name, ids: t[feld].filter((id) => ids.includes(id)) }));
-  const bekannt = new Set(TESTATE.flatMap((t) => t[feld]));
+/** Aufgabentypen nach Testat gruppiert (fuer die Auswahlliste bei "Eigene Auswahl"). */
+function gruppiert(ids) {
+  const gruppen = TESTATE.map((t) => ({ name: `Testat ${t.nr}: ${t.titel}`, ids: t.typen.filter((id) => ids.includes(id)) }));
+  const bekannt = new Set(TESTATE.flatMap((t) => t.typen));
   const rest = ids.filter((id) => !bekannt.has(id));
   if (rest.length) gruppen.push({ name: "Weitere", ids: rest });
   return gruppen.filter((g) => g.ids.length);
 }
 
-function vorlagenZeigen(katalog, gewaehlt) {
+/** Eine Karte je Testat, sofern der Generator die Vorlage kennt. */
+function testateZeigen(katalog, gewaehlt) {
   const ziel = $("#vorlagen");
   ziel.replaceChildren();
-  const nachId = new Map(katalog.vorlagen.map((v) => [v.id, v]));
-  for (const g of gruppiert(katalog.vorlagen.map((v) => v.id), "vorlagen")) {
-    const box = document.createElement("div");
-    box.className = "gruppe";
-    const h = document.createElement("h3");
-    h.textContent = g.name;
-    box.append(h);
-    for (const id of g.ids) {
-      const v = nachId.get(id);
-      const zeile = vonVorlage("#vorlage-zeile");
-      const input = zeile.querySelector("input");
-      input.value = id;
-      input.checked = id === gewaehlt;
-      zeile.querySelector(".v-titel").textContent = VORLAGE_TITEL[id] ?? v.titel;
-      zeile.querySelector(".v-text").textContent = VORLAGE_TEXT[id] ?? v.aufgaben.join(", ");
-      box.append(zeile);
+  const vorhanden = new Set(katalog.vorlagen.map((v) => v.id));
+  for (const t of TESTATE.filter((t) => vorhanden.has(t.vorlage))) {
+    const karte = vonVorlage("#testat-karte");
+    const input = karte.querySelector("input");
+    input.value = t.vorlage;
+    input.checked = t.vorlage === gewaehlt;
+    karte.querySelector(".t-nr").textContent = `Testat ${t.nr}`;
+    karte.querySelector(".t-titel").textContent = t.titel;
+    const liste = karte.querySelector(".t-aufgaben");
+    for (const a of t.aufgaben) {
+      const s = document.createElement("span");
+      s.textContent = a;
+      liste.append(s);
     }
-    ziel.append(box);
+    ziel.append(karte);
   }
-  if (!ziel.querySelector("input:checked")) ziel.querySelector("input").checked = true;
+  const erste = ziel.querySelector("input");
+  if (erste && !ziel.querySelector("input:checked")) erste.checked = true;
 }
 
 let typen = [];
 
 function typAuswahl() {
   const select = document.createElement("select");
-  for (const g of gruppiert(typen.map((t) => t.id), "typen")) {
+  for (const g of gruppiert(typen.map((t) => t.id))) {
     const og = document.createElement("optgroup");
     og.label = g.name;
     for (const id of g.ids) {
@@ -306,7 +291,7 @@ async function start() {
   }
   const alt = laden();
   typen = r.katalog.typen;
-  vorlagenZeigen(r.katalog, alt.vorlage);
+  testateZeigen(r.katalog, alt.vorlage);
 
   const zeilen = Array.isArray(alt.zeilen) && alt.zeilen.length ? alt.zeilen : [{ typ: "asm2bin", param: "" }];
   for (const z of zeilen) aufgabeHinzufuegen(z.typ, z.param ?? "");

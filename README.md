@@ -62,6 +62,7 @@ java -jar testat-generator.jar gruppe_A.werk --vorlage spruenge
 | `kontrollstrukturen` | c2asm(zufall), asm2c(zufall) |
 | `verzweigungen` | c2asm(if), asm2c(if) |
 | `schleifen` | c2asm(schleife), asm2c(schleife) |
+| `grundlagen` | asm2bin, bin2asm, c2asm, asm2c (alle zufall) – ganzes Testat 1 (Webseite) |
 | `funktionen` | rekursion, aufruf, stack, array (alle zufall) – Testat 2; `shift` bei Bedarf über `--aufgaben` |
 | `speicherhierarchie` | cache-bits, cache-sim, cache-prog, amat, vm (alle zufall) – Testat 4; `schreiben` bei Bedarf über `--aufgaben` |
 | `prozessor` | eintakt, mehrtakt(zufall), hazards |
@@ -127,8 +128,9 @@ java -jar testat-generator.jar ausfuehren loesung.s         # dasselbe im Genera
 
 ## Webseite für Übungsblätter
 
-Statische Seite, auf der Studierende Übungsblätter (fertige Vorlage oder eigene Auswahl, 1–10 Blätter)
-als ZIP für Overleaf erzeugen. Der Generator wird mit [TeaVM](https://teavm.org) nach JavaScript
+Statische Seite, auf der Studierende Übungsblätter (ganzes Testat 1–4 oder eigene Auswahl, 1–10 Blätter)
+als ZIP für Overleaf erzeugen. Die vier Testate entsprechen den Vorlagen `grundlagen`, `funktionen`,
+`prozessor` und `speicherhierarchie` (Zuordnung in `web/app.js`, `TESTATE`). Der Generator wird mit [TeaVM](https://teavm.org) nach JavaScript
 übersetzt und läuft **komplett im Browser** – kein Server rechnet, nichts wird gesendet.
 Nur Übungsblätter mit zufälligen Seeds, Lösungen inklusive. Schlüssel, `.werk`-Dateien und
 Zuordnungsdateien gibt es auf der Seite nicht; echte Testate entstehen weiter offline.

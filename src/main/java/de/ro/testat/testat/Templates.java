@@ -79,6 +79,14 @@ public final class Templates {
                 .add(new AssemblerToC("schleife"))
                 .build());
 
+        // Ganzes Testat 1 (Webseite): Kodierung hin und zurueck, C -> RISC-V und RISC-V -> C
+        register("grundlagen", () -> Testat.builder("grundlagen", "Grundlagen Assembler")
+                .add(new AsmToMachineCode())
+                .add(new MachineCodeToAsm())
+                .add(new CToAssembler())
+                .add(new AssemblerToC())
+                .build());
+
         // Funktionen & Speicher (Testat 2): Rekursion, Funktionsaufruf, Stack, Arrays; "shift" bei Bedarf per --aufgaben
         register("funktionen", () -> Testat.builder("funktionen", "Funktionen und Speicher")
                 .add(new RecursionToAssembler())
