@@ -162,7 +162,8 @@
                                     <jsModuleType>ES2015</jsModuleType>
                                     <targetDirectory>${project.build.directory}/site</targetDirectory>
                                     <targetFileName>generator.js</targetFileName>
-                                    <minifying>true</minifying>
+                                    <!-- vorerst false: lesbare Namen im Stack bei Fehlern; wenn alles laeuft auf true -->
+                                    <minifying>false</minifying>
                                     <optimizationLevel>ADVANCED</optimizationLevel>
                                 </configuration>
                             </execution>

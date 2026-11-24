@@ -95,6 +95,15 @@ public final class WebApi {
         }
     }
 
+    /**
+     * Wie {@link #erzeugen}, aber ohne Fehler abzufangen: eine Ausnahme kommt mit dem
+     * JavaScript-Stack bei der Webseite an. Nur zur Fehlersuche (web/test/smoke.mjs).
+     */
+    @JSExport
+    public static String erzeugenOhneSchutz(String vorlage, String kette, String titel, String seeds) {
+        return erzeugenOderFehler(leer(vorlage), leer(kette), leer(titel), leer(seeds));
+    }
+
     private static String erzeugenOderFehler(String vorlage, String kette, String titel, String seeds) {
         Testat testat;
         String name;

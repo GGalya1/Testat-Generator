@@ -46,6 +46,7 @@ function unterschied(jvm, js) {
 
 let ok = 0;
 const fehler = [];
+let ersterFehlerFall = null;
 const zeiten = new Map();
 for (const zeile of readFileSync(referenz, "utf8").split("\n")) {
   if (!zeile) continue;
@@ -62,7 +63,10 @@ for (const zeile of readFileSync(referenz, "utf8").split("\n")) {
   z.push(performance.now() - t0);
   zeiten.set(name, z);
   if (aus === f.ausgabe) ok++;
-  else fehler.push(`${name} (Seed ${f.seed}): ${unterschied(f.ausgabe, aus)}`);
+  else {
+    fehler.push(`${name} (Seed ${f.seed}): ${unterschied(f.ausgabe, aus)}`);
+    if (!ersterFehlerFall && aus.startsWith('{"ok":false')) ersterFehlerFall = f;
+  }
 }
 
 console.log("\nZeit je Blatt in Node (erster Aufruf / Durchschnitt / Maximum):");
@@ -75,6 +79,19 @@ const beispiel = JSON.parse(gen.erzeugen("kodierung", "", "", "0123456789abcdef,
 if (beispiel.ok) writeFileSync(join(site, "..", "smoke.zip"), zipErstellen(beispiel.dateien));
 
 console.log(`\n${ok} von ${ok + fehler.length} Faellen gleich wie auf der JVM.`);
+if (ersterFehlerFall) {
+  // Denselben Fall noch einmal ohne Abfangen in Java: zeigt, wo es im Code passiert
+  console.log(`\nStack fuer ${ersterFehlerFall.vorlage || ersterFehlerFall.kette} (Seed ${ersterFehlerFall.seed}):`);
+  try {
+    gen.erzeugenOhneSchutz(ersterFehlerFall.vorlage, ersterFehlerFall.kette, "", ersterFehlerFall.seed);
+    console.log("  (ohne Abfangen kein Fehler)");
+  } catch (e) {
+    const stack = String((e && e.stack) || e).split("\n").slice(0, 30);
+    console.log(stack.map((z) => "  " + z).join("\n"));
+    const ursache = e && typeof e.getCause === "function" ? e.getCause() : null;
+    if (ursache) console.log("  Ursache: " + String(ursache.stack || ursache));
+  }
+}
 if (fehler.length) {
   console.log(`\n${fehler.length} Abweichungen (hoechstens 15 gezeigt):`);
   for (const f of fehler.slice(0, 15)) console.log("- " + f);
