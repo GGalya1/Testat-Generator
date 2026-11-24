@@ -100,10 +100,10 @@ public final class DocumentBuilder {
     /** Ein Blatt: Titelbox mit Matrikelnummer, dann die Aufgaben in tudaexercise-Umgebungen. */
     static String blatt(Testat testat, Entry e) {
         StringBuilder L = new StringBuilder();
-        L.append("% Matrikelnummer ").append(e.matrikel()).append(f(", Seed %016x%n", e.seed()));
+        L.append("% Matrikelnummer ").append(e.matrikel()).append(f(", Seed %016x\n", e.seed()));
         L.append("\\title[\\TestatKurztitel]{").append(testat.title()).append("}\n");
         L.append("\\subtitle{Matrikelnummer: \\texttt{").append(e.matrikel()).append('}')
-                .append(f("\\IfSolutionT{\\quad Seed: \\texttt{%016x}}}%n", e.seed()));
+                .append(f("\\IfSolutionT{\\quad Seed: \\texttt{%016x}}}\n", e.seed()));
         L.append("\\author{\\TestatAutoren}\n");
         L.append("\\term{\\TestatSemester}\n");
         L.append("\\setcounter{task}{0}\n");

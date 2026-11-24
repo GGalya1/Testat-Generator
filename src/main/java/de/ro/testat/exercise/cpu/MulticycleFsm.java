@@ -303,7 +303,7 @@ public final class MulticycleFsm implements Exercise {
     /** Zustand als Kreis: Name farbig, darunter die Steuersignale. */
     static String stateNode(String id, String title, double x, double y, List<String> signals, boolean isNew) {
         return String.format(Locale.ROOT,
-                "\\node[state%s] (%s) at (%.1f,%.1f) {{\\color{%s}\\small\\bfseries %s: %s}\\\\%s};%n",
+                "\\node[state%s] (%s) at (%.1f,%.1f) {{\\color{%s}\\small\\bfseries %s: %s}\\\\%s};\n",
                 isNew ? ",neu" : "", id, x, y, isNew ? "fsmNeu" : "fsmName", id, title, String.join("\\\\", signals));
     }
 
@@ -381,11 +381,11 @@ public final class MulticycleFsm implements Exercise {
             boolean terminal = s != State.S4 && kinds.stream().anyMatch(k -> k.path.get(k.path.size() - 1) == s);
             if (terminal) {
                 boolean isNew = !baseStates.contains(s);
-                sb.append(String.format(Locale.ROOT, "\\draw[%s] (%s.south) -- (%s.south |- S4.east);%n",
+                sb.append(String.format(Locale.ROOT, "\\draw[%s] (%s.south) -- (%s.south |- S4.east);\n",
                         isNew ? "fsmNeu, very thick" : "semithick", s.name(), s.name()));
             }
         }
-        sb.append(String.format(Locale.ROOT, "\\draw[tr] (S4.east) -- (%.1f,%.1f) -- (%.1f,2.2) -- (0,2.2) -- (S0.north);%n",
+        sb.append(String.format(Locale.ROOT, "\\draw[tr] (S4.east) -- (%.1f,%.1f) -- (%.1f,2.2) -- (0,2.2) -- (S0.north);\n",
                 right, bottom, right));
         sb.append("\\end{tikzpicture}\n");
         return sb.toString();

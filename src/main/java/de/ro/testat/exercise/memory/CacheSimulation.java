@@ -297,7 +297,7 @@ public final class CacheSimulation implements Exercise {
             double x = 0.3 + abstand * spur.get(p);
             String ende = p.gestrichelt() ? "0.9ex" : "1.6ex";
             sb.append(String.format(java.util.Locale.ROOT,
-                    "\\draw[pf, %s%s] ([xshift=7pt,yshift=-0.3ex]%s-%d) -- ++(%.2f,0) |- ([xshift=7pt,yshift=%s]%s-%d);%n",
+                    "\\draw[pf, %s%s] ([xshift=7pt,yshift=-0.3ex]%s-%d) -- ++(%.2f,0) |- ([xshift=7pt,yshift=%s]%s-%d);\n",
                     p.farbe(), p.gestrichelt() ? ", dashed" : "", praefix, p.von(), x, ende, praefix, p.nach()));
         }
         return sb.append("\\end{tikzpicture}%\n").toString();

@@ -38,18 +38,18 @@ public final class EncodingTex {
     public static String aufgabe(Instance in, Encoded enc, Direction dir) {
         StringBuilder L = new StringBuilder();
         if (dir == Direction.ASM2BIN) {
-            L.append(f("Berechnen Sie den Maschinencode f\\\"ur den Befehl %s.%n", Tex.asm(in, false, false)));
+            L.append(f("Berechnen Sie den Maschinencode f\\\"ur den Befehl %s.\n", Tex.asm(in, false, false)));
             if (in.format().isPcRelative()) {
-                L.append(f("Der Befehl steht an Adresse \\texttt{%s}, die Marke \\texttt{ziel} an Adresse \\texttt{%s}.%n",
+                L.append(f("Der Befehl steht an Adresse \\texttt{%s}, die Marke \\texttt{ziel} an Adresse \\texttt{%s}.\n",
                         Tex.hex8(in.pc()), Tex.hex8(in.target())));
             }
             L.append("\\par Geben Sie das Ergebnis sowohl bin\\\"ar als auch hexadezimal an.\n");
         } else {
-            L.append(f("Bestimmen Sie den Assemblerbefehl zum Maschinencode \\texttt{%s}.%n", enc.hex()));
+            L.append(f("Bestimmen Sie den Assemblerbefehl zum Maschinencode \\texttt{%s}.\n", enc.hex()));
             L.append("Verwenden Sie ABI-Registernamen (z.\\,B. \\texttt{a0}).\n");
             if (in.format().isPcRelative()) {
                 L.append(f("\\par Der Befehl steht an Adresse \\texttt{%s}. "
-                        + "Geben Sie zus\\\"atzlich die Zieladresse des Sprungs an.%n", Tex.hex8(in.pc())));
+                        + "Geben Sie zus\\\"atzlich die Zieladresse des Sprungs an.\n", Tex.hex8(in.pc())));
             }
         }
         return L.toString();
@@ -86,7 +86,7 @@ public final class EncodingTex {
             steps.add("\\textbf{Felder einsetzen} (siehe Schema unten):\\\\[4pt]\n" + Tex.fieldsTable(in, fields));
             steps.add(f("\\textbf{Ergebnis.} Bin\\\"ar nach Feldern: %s. "
                             + "In 4er-Gruppen zerlegt, jede Gruppe ergibt eine Hex-Ziffer:"
-                            + "\\begin{center}%n%s\\\\[10pt]\\fbox{\\Large\\texttt{%s}}\\end{center}",
+                            + "\\begin{center}\n%s\\\\[10pt]\\fbox{\\Large\\texttt{%s}}\\end{center}",
                     Tex.groupedBinary(fields), NibbleDiagram.render(enc.word()), enc.hex()));
         } else {
             steps.add("\\textbf{Hex $\\rightarrow$ bin\\\"ar.} Jede Hex-Ziffer entspricht 4 Bit:"

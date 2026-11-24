@@ -415,10 +415,10 @@ public final class NewInstructionFsm implements Exercise {
             boolean loopNew = baseTerminals.isEmpty();
             for (String t : terminals) {
                 boolean isNew = !baseTerminals.contains(t);
-                sb.append(String.format(Locale.ROOT, "\\draw[%s] (%s.south) -- (%.1f,%.1f);%n",
+                sb.append(String.format(Locale.ROOT, "\\draw[%s] (%s.south) -- (%.1f,%.1f);\n",
                         isNew ? "fsmNeu, very thick" : "semithick", t, nodes.get(t).x(), loopY));
             }
-            sb.append(String.format(Locale.ROOT, "\\draw[%s] (%.1f,%.1f) -- (%.1f,%.1f) -- (%.1f,2.2) -- (0,2.2) -- (S0.north);%n",
+            sb.append(String.format(Locale.ROOT, "\\draw[%s] (%.1f,%.1f) -- (%.1f,%.1f) -- (%.1f,2.2) -- (0,2.2) -- (S0.north);\n",
                     loopNew ? "trNeu" : "tr", left, loopY, right, loopY, right));
         }
         sb.append("\\end{tikzpicture}\n");
