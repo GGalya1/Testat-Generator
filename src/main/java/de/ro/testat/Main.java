@@ -55,6 +55,7 @@ public final class Main {
             """;
 
     public static void main(String[] args) {
+        de.ro.testat.probelauf.GrosserStack.aktivieren(); // tiefe Rekursion im C-Interpreter (nur JVM)
         try {
             System.exit(run(args));
         } catch (IllegalArgumentException | IllegalStateException e) {

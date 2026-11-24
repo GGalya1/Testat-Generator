@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Übungsblätter Rechnerorganisation</title>
+  <meta name="description" content="Übungsblätter zu den Testaten in Rechnerorganisation erzeugen, mit Lösungen, als LaTeX-Projekt für Overleaf.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main>
+    <header class="kopf">
+      <figure class="befehl" aria-label="Beispiel: Maschinencode des Befehls sw t0, 8(sp)">
+        <div class="bits" aria-hidden="true">
+          <span class="feld f-immA" style="--n:7"><b>0000000</b><i>imm[11:5]</i></span>
+          <span class="feld f-rs2" style="--n:5"><b>00101</b><i>rs2</i></span>
+          <span class="feld f-rs1" style="--n:5"><b>00010</b><i>rs1</i></span>
+          <span class="feld f-mn" style="--n:3"><b>010</b><i>funct3</i></span>
+          <span class="feld f-immB" style="--n:5"><b>01000</b><i>imm[4:0]</i></span>
+          <span class="feld f-mn" style="--n:7"><b>0100011</b><i>opcode</i></span>
+        </div>
+        <figcaption><code>sw t0, 8(sp)</code></figcaption>
+      </figure>
+      <h1>Übungsblätter für Rechnerorganisation</h1>
+      <p class="einleitung">
+        Aufgaben wie im Testat, jedes Mal neu ausgewürfelt, mit Lösungen.
+        Sie bekommen ein LaTeX-Projekt als ZIP, das Sie in Overleaf öffnen.
+      </p>
+    </header>
+
+    <form id="formular" novalidate>
+      <fieldset class="modus">
+        <legend>Was soll auf das Blatt?</legend>
+        <div class="umschalter" role="radiogroup">
+          <label><input type="radio" name="modus" value="vorlage" checked> Fertige Vorlage</label>
+          <label><input type="radio" name="modus" value="eigen"> Eigene Auswahl</label>
+        </div>
+      </fieldset>
+
+      <section id="bereich-vorlage" class="bereich">
+        <div id="vorlagen" class="vorlagen">
+          <p class="laden">Generator wird geladen …</p>
+        </div>
+      </section>
+
+      <section id="bereich-eigen" class="bereich" hidden>
+        <label class="titel-feld">
+          <span>Überschrift auf dem Blatt</span>
+          <input id="titel" type="text" maxlength="60" placeholder="Übung" autocomplete="off">
+        </label>
+        <ol id="aufgaben" class="aufgaben"></ol>
+        <button type="button" id="aufgabe-dazu" class="leise">Aufgabe hinzufügen</button>
+      </section>
+
+      <div class="abschluss">
+        <label class="anzahl">
+          <span>Anzahl Blätter</span>
+          <input id="anzahl" type="number" min="1" max="10" value="1" inputmode="numeric">
+        </label>
+        <button type="submit" id="erzeugen" disabled>ZIP erzeugen</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <section id="ergebnis" class="ergebnis" hidden aria-labelledby="ergebnis-titel">
+      <h2 id="ergebnis-titel">Fertig</h2>
+      <p><a id="download" class="download" href="#" download>ZIP herunterladen</a></p>
+      <ul id="blaetter" class="blaetter"></ul>
+      <p class="hinweis">Jeder Klick auf „ZIP erzeugen“ würfelt neue Aufgaben aus.</p>
+    </section>
+
+    <section class="anleitung" aria-labelledby="anleitung-titel">
+      <h2 id="anleitung-titel">So öffnen Sie das ZIP in Overleaf</h2>
+      <ol>
+        <li>In Overleaf <em>New Project → Upload Project</em> wählen und das ZIP hochladen.</li>
+        <li><code>main.tex</code> enthält die Aufgabenblätter.</li>
+        <li>Für die Lösungen im Menü unter <em>Main document</em> die Datei <code>loesungen.tex</code> wählen und neu übersetzen.</li>
+      </ol>
+    </section>
+
+    <footer class="fuss">
+      <p>Der Generator läuft vollständig in Ihrem Browser, es werden keine Daten gesendet.
+      Nur Ihre letzte Auswahl merkt sich dieser Browser für den nächsten Besuch.
+      Diese Blätter sind zum Üben, die echten Testate werden getrennt erstellt.</p>
+    </footer>
+  </main>
+
+  <template id="vorlage-zeile">
+    <label class="vorlage">
+      <input type="radio" name="vorlage">
+      <span class="v-titel"></span>
+      <span class="v-text"></span>
+    </label>
+  </template>
+
+  <template id="aufgabe-zeile">
+    <li class="aufgabe">
+      <div class="a-zeile">
+        <label class="a-typ"><span class="sr">Aufgabentyp</span></label>
+        <label class="a-param"><span class="sr">Parameter</span>
+          <input type="text" autocomplete="off" spellcheck="false" placeholder="Parameter (optional)"></label>
+        <button type="button" class="a-weg leise">Entfernen</button>
+      </div>
+      <p class="a-hilfe"></p>
+    </li>
+  </template>
+</body>
+</html>

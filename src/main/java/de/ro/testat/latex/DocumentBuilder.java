@@ -57,9 +57,24 @@ public final class DocumentBuilder {
 
     /** Liefert Pfad im Zip -> Dateiinhalt. */
     public static Map<String, String> build(Testat testat, String werkName, List<Entry> entries) {
+        return build(testat, werkName, entries, DocumentBuilder::resource);
+    }
+
+    /** Namen der statischen Dateien (praeambel.tex, ...), die {@code ressourcen} liefern muss. */
+    public static List<String> resourceNames() {
+        return RESOURCES;
+    }
+
+    /**
+     * Wie {@link #build(Testat, String, List)}, aber die statischen Dateien kommen von
+     * {@code ressourcen} (Name -> Inhalt) statt aus dem Klassenpfad. Fuer den Browser: dort gibt
+     * es kein getResourceAsStream, die Webseite laedt die Dateien selbst und reicht sie herein.
+     */
+    public static Map<String, String> build(Testat testat, String werkName, List<Entry> entries,
+                                            java.util.function.Function<String, String> ressourcen) {
         Map<String, String> files = new LinkedHashMap<>();
         for (String r : RESOURCES) {
-            files.put(r, resource(r));
+            files.put(r, ressourcen.apply(r));
         }
         files.put("zusatz.tex", zusatz(testat));
 

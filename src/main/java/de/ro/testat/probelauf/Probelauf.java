@@ -37,6 +37,7 @@ public final class Probelauf {
 
     /** Einstieg fuer das eigene Studierenden-jar: java -jar testat-generator-probelauf.jar datei.s */
     public static void main(String[] args) {
+        GrosserStack.aktivieren(); // tiefe Rekursion im C-Interpreter
         try {
             System.exit(run(args));
         } catch (IllegalArgumentException e) {

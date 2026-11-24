@@ -1,0 +1,58 @@
+# Baut die Webseite (Generator als JavaScript via TeaVM) und veroeffentlicht sie auf GitHub Pages.
+# Einmalig im Repository einstellen: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+name: Webseite
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      # Tests (inkl. JVM-Referenz fuer den Vergleich) und Java -> JavaScript nach target/site
+      - name: Testen und nach JavaScript uebersetzen
+        run: mvn -B -Pweb package
+
+      # Dieselben Faelle im JavaScript: muss Zeichen fuer Zeichen wie auf der JVM sein,
+      # sonst wird nichts veroeffentlicht (ungepruefte Loesungen gehen nie raus)
+      - name: JavaScript mit der JVM vergleichen
+        run: node web/test/smoke.mjs target/site target/web-referenz.jsonl
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/site
+
+  veroeffentlichen:
+    needs: bauen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

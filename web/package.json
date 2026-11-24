@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Nur damit Node die .js-Dateien (auch generator.js von TeaVM) als ES-Module laedt, siehe test/smoke.mjs"
+}

@@ -18,6 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProbelaufTest {
 
+    static {
+        // wie auf der Kommandozeile: ohne grossen Stack kommt die Java-StackOverflowError vor der
+        // eigenen Grenze (2000 Aufrufe), und die Fehlermeldung hat keine Zeilennummer
+        GrosserStack.aktivieren();
+    }
+
     // ------------------------------------------------------------------ Abgleich mit dem Generator
 
     /** Jedes vom Generator erzeugte Assemblerprogramm laeuft im Probelauf und liefert die Werte des C-Interpreters. */

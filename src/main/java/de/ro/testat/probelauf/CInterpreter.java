@@ -110,30 +110,25 @@ public final class CInterpreter {
         this.maxSchritte = maxSchritte;
     }
 
+    /** Wo ein Lauf ausgefuehrt wird, z. B. direkt oder in einem Thread mit grossem Stack. */
+    public interface Ausfuehrung {
+        Ergebnis ausfuehren(java.util.function.Supplier<Ergebnis> lauf);
+    }
+
     /**
-     * Ein wiederverwendeter Hintergrund-Thread mit grossem Stack, damit auch tiefe Rekursion (bis
-     * 2000 Aufrufe) geht. Frueher wurde fuer jeden Lauf ein neuer Thread gestartet; der Generator
-     * ruft den Interpreter aber pro Aufgabe 10-20-mal auf.
+     * Standard: direkt im aufrufenden Thread. Das reicht dem Generator (getestet mit 256 KB Stack)
+     * und geht auch im Browser (TeaVM), wo es keine echten Threads gibt. Die Kommandozeile schaltet
+     * mit {@link GrosserStack#aktivieren()} auf einen Thread mit grossem Stack um, damit im Probelauf
+     * auch tiefe Rekursion (bis 2000 Aufrufe) geht.
      */
-    private static final java.util.concurrent.ExecutorService AUSFUEHRUNG =
-            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(null, r, "c-probelauf", 512L << 20);
-                t.setDaemon(true);
-                return t;
-            });
+    private static volatile Ausfuehrung ausfuehrung = java.util.function.Supplier::get;
+
+    public static void setAusfuehrung(Ausfuehrung a) {
+        ausfuehrung = java.util.Objects.requireNonNull(a);
+    }
 
     public static Ergebnis run(Programm p, int maxSchritte) {
-        try {
-            return AUSFUEHRUNG.submit(() -> new CInterpreter(maxSchritte).lauf(p)).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("unterbrochen", e);
-        } catch (java.util.concurrent.ExecutionException e) {
-            if (e.getCause() instanceof RuntimeException re) {
-                throw re;
-            }
-            throw new IllegalStateException("Interner Fehler im C-Interpreter: " + e.getCause(), e.getCause());
-        }
+        return ausfuehrung.ausfuehren(() -> new CInterpreter(maxSchritte).lauf(p));
     }
 
     private Ergebnis lauf(Programm p) {

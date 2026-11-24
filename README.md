@@ -125,6 +125,35 @@ java -jar testat-generator.jar ausfuehren loesung.s         # dasselbe im Genera
 - Kontrolle: `ProbelaufTest` führt alle vom Generator erzeugten Assembler- und C-Programme
   (6 Formen × 400 Seeds) im Probelauf aus und vergleicht mit dem Interpreter des Generators.
 
+## Webseite für Übungsblätter
+
+Statische Seite, auf der Studierende Übungsblätter (fertige Vorlage oder eigene Auswahl, 1–10 Blätter)
+als ZIP für Overleaf erzeugen. Der Generator wird mit [TeaVM](https://teavm.org) nach JavaScript
+übersetzt und läuft **komplett im Browser** – kein Server rechnet, nichts wird gesendet.
+Nur Übungsblätter mit zufälligen Seeds, Lösungen inklusive. Schlüssel, `.werk`-Dateien und
+Zuordnungsdateien gibt es auf der Seite nicht; echte Testate entstehen weiter offline.
+
+```
+mvn -Pweb package                       # Tests + Seite nach target/site (generator.js, index.html, ...)
+node web/test/smoke.mjs                 # generator.js gegen die JVM pruefen (target/site, target/web-referenz.jsonl)
+jwebserver -d <absoluter Pfad>/target/site   # lokal ansehen: http://127.0.0.1:8000
+```
+
+- `de.ro.testat.web.WebApi` – Schnittstelle für JavaScript (`katalog`, `setzeRessource`, `erzeugen`),
+  nur Strings/JSON über die Grenze. Läuft auch auf der JVM (`WebApiTest`).
+- `web/` – die Seite: `index.html`, `app.js` (Bedienung), `generator-worker.js` + `generator-kern.js`
+  (Generator im Web Worker), `zip.js` (ZIP ohne Bibliothek). Die LaTeX-Dateien aus
+  `src/main/resources/latex` werden nach `target/site/latex` kopiert und von der Seite geladen.
+- Kontrolle: `WebReferenzTest` schreibt mit `-Pweb` die JVM-Ausgabe für feste Seeds (alle Vorlagen und
+  Aufgabentypen), `web/test/smoke.mjs` lässt dieselben Fälle durch `generator.js` laufen und
+  vergleicht Zeichen für Zeichen.
+- Veröffentlichung: `.github/workflows/webseite.yml` baut bei jedem Push auf `main`, vergleicht und
+  stellt `target/site` auf GitHub Pages (einmalig: Settings → Pages → Source: „GitHub Actions“).
+  Weicht das JavaScript von der JVM ab, wird nichts veröffentlicht.
+- Im Browser gibt es keine Threads: Der C-Interpreter läuft dort direkt (`CInterpreter.setAusfuehrung`).
+  Die Kommandozeile schaltet mit `GrosserStack.aktivieren()` auf den Thread mit 512 MB Stack um
+  (nur für tiefe Rekursion im Probelauf nötig, der Generator kommt mit 256 KB aus).
+
 ## Für Entwickler:innen
 
 ```
@@ -150,8 +179,9 @@ de.ro.testat
 ├── rv/                   RISC-V: Formate, Befehle, Kodierung, Zufallsoperanden
 ├── latex/                LaTeX-Hilfen, TikZ-Schemata, Projektaufbau (DocumentBuilder)
 ├── io/                   .werk-Datei, Seeds, Zip + Zuordnung
-└── probelauf/            Probelauf für Studierende: RiscvParser/RiscvMaschine, CParser/CInterpreter
-                          (unabhängig vom Rest, eigenes jar)
+├── probelauf/            Probelauf für Studierende: RiscvParser/RiscvMaschine, CParser/CInterpreter
+│                         (unabhängig vom Rest, eigenes jar)
+└── web/                  WebApi: Schnittstelle fuer die Webseite (TeaVM, siehe "Webseite")
 ```
 
 ### Neue Vorlage

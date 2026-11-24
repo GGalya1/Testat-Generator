@@ -14,9 +14,17 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
+        <teavm.version>0.16.0</teavm.version>
     </properties>
 
     <dependencies>
+        <!-- nur fuer die Annotation @JSExport in de.ro.testat.web.WebApi. Das jar braucht sie zur
+             Laufzeit nicht (Abhaengigkeiten werden nicht ins jar gepackt, java -jar geht wie bisher). -->
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-jso</artifactId>
+            <version>${teavm.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -70,4 +78,98 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Webseite: mvn -Pweb package  ->  target/site/ (statische Seite, Generator als JavaScript)
+             Lokal ansehen: jwebserver -d <absoluter Pfad>/target/site   (dann http://127.0.0.1:8000) -->
+        <profile>
+            <id>web</id>
+            <dependencies>
+                <!-- Nachbau der Java-Klassenbibliothek fuer TeaVM -->
+                <dependency>
+                    <groupId>org.teavm</groupId>
+                    <artifactId>teavm-classlib</artifactId>
+                    <version>${teavm.version}</version>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <!-- WebReferenzTest schreibt JVM-Ausgaben, web/test/smoke.mjs vergleicht sie mit generator.js -->
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <web.referenz>${project.build.directory}/web-referenz.jsonl</web.referenz>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <!-- Seite (web/) und LaTeX-Vorlagen nach target/site kopieren -->
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>web-seite</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/site</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>web</directory>
+                                            <excludes>
+                                                <exclude>test/**</exclude>
+                                            </excludes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>web-latex</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/site/latex</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>src/main/resources/latex</directory>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <!-- Java -> JavaScript: target/site/generator.js (ES-Modul mit katalog, erzeugen, ...) -->
+                        <groupId>org.teavm</groupId>
+                        <artifactId>teavm-maven-plugin</artifactId>
+                        <version>${teavm.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                                <phase>process-classes</phase>
+                                <configuration>
+                                    <mainClass>de.ro.testat.web.WebApi</mainClass>
+                                    <targetType>JAVASCRIPT</targetType>
+                                    <jsModuleType>ES2015</jsModuleType>
+                                    <targetDirectory>${project.build.directory}/site</targetDirectory>
+                                    <targetFileName>generator.js</targetFileName>
+                                    <minifying>true</minifying>
+                                    <optimizationLevel>ADVANCED</optimizationLevel>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
