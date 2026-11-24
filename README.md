@@ -143,7 +143,7 @@ jwebserver -d <absoluter Pfad>/target/site   # lokal ansehen: http://127.0.0.1:8
 
 - `de.ro.testat.web.WebApi` – Schnittstelle für JavaScript (`katalog`, `setzeRessource`, `erzeugen`),
   nur Strings/JSON über die Grenze. Läuft auch auf der JVM (`WebApiTest`).
-- `web/` – die Seite: `index.html`, `app.js` (Bedienung), `generator-worker.js` + `generator-kern.js`
+- `web/` – die Seite: `index.html`, `style.css` (eigenes CSS, ohne Framework), `app.js` (Bedienung), `generator-worker.js` + `generator-kern.js`
   (Generator im Web Worker), `zip.js` (ZIP ohne Bibliothek). Die LaTeX-Dateien aus
   `src/main/resources/latex` werden nach `target/site/latex` kopiert und von der Seite geladen.
 - Kontrolle: `WebReferenzTest` schreibt mit `-Pweb` die JVM-Ausgabe für feste Seeds (alle Vorlagen und

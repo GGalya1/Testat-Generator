@@ -26,6 +26,12 @@ const SPEICHER = "uebungsblaetter-ro";
 const $ = (s) => document.querySelector(s);
 const status = $("#status");
 
+/** Statuszeile unter dem Knopf; fehler = rot. */
+function meldung(text, fehler = false) {
+  status.className = fehler ? "status fehler" : "status";
+  status.textContent = text;
+}
+
 // ---------------------------------------------------------------- Verbindung zum Generator
 
 function generatorStarten() {
@@ -241,8 +247,7 @@ async function erzeugenKlick(e) {
   const auftrag = auftragLesen();
   merken(auftrag);
   knopf.disabled = true;
-  status.className = "status";
-  status.textContent = auftrag.anzahl === 1 ? "Blatt wird erzeugt …" : `${auftrag.anzahl} Blätter werden erzeugt …`;
+  meldung(auftrag.anzahl === 1 ? "Blatt wird erzeugt …" : `${auftrag.anzahl} Blätter werden erzeugt …`);
 
   const r = await generator("erzeugen", auftrag.modus === "vorlage"
     ? { vorlage: auftrag.vorlage, anzahl: auftrag.anzahl }
@@ -250,8 +255,7 @@ async function erzeugenKlick(e) {
   knopf.disabled = false;
 
   if (!r.ok) {
-    status.className = "status fehler";
-    status.textContent = r.fehler;
+    meldung(r.fehler, true);
     return;
   }
 
@@ -275,7 +279,7 @@ async function erzeugenKlick(e) {
   });
   $("#ergebnis-titel").textContent = r.blaetter.length === 1 ? "1 Blatt erzeugt" : `${r.blaetter.length} Blätter erzeugt`;
   $("#ergebnis").hidden = false;
-  status.textContent = `Fertig in ${r.dauer} ms. Der Download startet automatisch.`;
+  meldung(`Fertig in ${r.dauer} ms. Der Download startet automatisch.`);
   link.click();
 }
 
@@ -285,8 +289,7 @@ async function start() {
   const r = await generator("katalog");
   if (!r.ok) {
     $("#vorlagen").replaceChildren();
-    status.className = "status fehler";
-    status.textContent = "Der Generator konnte nicht geladen werden: " + r.fehler;
+    meldung("Der Generator konnte nicht geladen werden: " + r.fehler, true);
     return;
   }
   const alt = laden();
@@ -297,7 +300,9 @@ async function start() {
   for (const z of zeilen) aufgabeHinzufuegen(z.typ, z.param ?? "");
   if (typeof alt.titel === "string") $("#titel").value = alt.titel;
   if (alt.anzahl) $("#anzahl").value = alt.anzahl;
-  if (alt.modus === "eigen") document.querySelector('input[name="modus"][value="eigen"]').checked = true;
+  // Immer mit "Ganzes Testat" starten (auch wenn zuletzt "Eigene Auswahl" benutzt wurde);
+  // die eigene Auswahl selbst bleibt gemerkt und steht beim Umschalten wieder da.
+  document.querySelector('input[name="modus"][value="vorlage"]').checked = true;
   modusZeigen();
 
   for (const r of document.querySelectorAll('input[name="modus"]')) r.addEventListener("change", modusZeigen);
