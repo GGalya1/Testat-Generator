@@ -1,6 +1,5 @@
 package de.ro.testat.exercise.control;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -111,10 +110,6 @@ public final class Ast {
         public Cond negate() {
             return new Cond(left, op.negate(), right);
         }
-
-        public Cond withOp(RelOp o) {
-            return new Cond(left, o, right);
-        }
     }
 
     public sealed interface Stmt permits Assign, IfChain, While, DoWhile, For {
@@ -140,35 +135,5 @@ public final class Ast {
     }
 
     public record Program(List<Var> vars, List<Stmt> stmts) {
-
-        /** Kopie, in der die erste Zuweisung "v = Konstante" einen anderen Wert bekommt. */
-        public Program withInit(Var v, int value) {
-            List<Stmt> out = new ArrayList<>(stmts);
-            for (int i = 0; i < out.size(); i++) {
-                if (out.get(i) instanceof Assign a && a.target().equals(v) && a.value() instanceof Const) {
-                    out.set(i, new Assign(v, new Const(value)));
-                    break;
-                }
-            }
-            return new Program(vars, List.copyOf(out));
-        }
-
-        /** Kopie mit ersetzter Anweisung (fuer "was waere, wenn ..."). */
-        public Program replace(Stmt old, List<Stmt> with) {
-            List<Stmt> out = new ArrayList<>();
-            for (Stmt s : stmts) {
-                if (s == old) {
-                    out.addAll(with);
-                } else {
-                    out.add(s);
-                }
-            }
-            return new Program(vars, List.copyOf(out));
-        }
-
-        /** Die erste Kontrollstruktur (alles ausser den Zuweisungen am Anfang). */
-        public Stmt firstControl() {
-            return stmts.stream().filter(s -> !(s instanceof Assign)).findFirst().orElseThrow();
-        }
     }
 }

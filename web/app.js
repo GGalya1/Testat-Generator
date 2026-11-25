@@ -1,5 +1,6 @@
 // Bedienung der Seite "Uebungsblaetter". Die eigentliche Arbeit macht generator-kern.js (im Web Worker).
 import { generatorStarten } from "./verbindung.js";
+import { gemerkt, meldung, merken } from "./seite.js";
 
 // Die vier Testate. "vorlage" ist die Vorlage aus Templates.java, die das ganze Testat erzeugt;
 // "aufgaben" steht so auf der Karte (Reihenfolge wie auf dem Blatt).
@@ -25,13 +26,6 @@ const MAX_BLAETTER = 10;
 const SPEICHER = "uebungsblaetter-ro";
 
 const $ = (s) => document.querySelector(s);
-const status = $("#status");
-
-/** Statuszeile unter dem Knopf; fehler = rot. */
-function meldung(text, fehler = false) {
-  status.className = fehler ? "status fehler" : "status";
-  status.textContent = text;
-}
 
 const generator = generatorStarten();
 
@@ -146,24 +140,6 @@ function modusZeigen() {
   $("#bereich-eigen").hidden = !eigen;
 }
 
-// ---------------------------------------------------------------- Merken (nur in diesem Browser)
-
-function laden() {
-  try {
-    return JSON.parse(localStorage.getItem(SPEICHER)) ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function merken(auftrag) {
-  try {
-    localStorage.setItem(SPEICHER, JSON.stringify(auftrag));
-  } catch {
-    // privater Modus o. ae.: dann eben nicht
-  }
-}
-
 // ---------------------------------------------------------------- Erzeugen
 
 function auftragLesen() {
@@ -187,7 +163,7 @@ async function erzeugenKlick(e) {
   e.preventDefault();
   const knopf = $("#erzeugen");
   const auftrag = auftragLesen();
-  merken(auftrag);
+  merken(SPEICHER, auftrag); // eigene Auswahl bleibt, wenn ein ganzes Testat erzeugt wird
   knopf.disabled = true;
   meldung(auftrag.anzahl === 1 ? "Blatt wird erzeugt …" : `${auftrag.anzahl} Blätter werden erzeugt …`);
 
@@ -234,7 +210,7 @@ async function start() {
     meldung("Der Generator konnte nicht geladen werden: " + r.fehler, true);
     return;
   }
-  const alt = laden();
+  const alt = gemerkt(SPEICHER);
   typen = r.katalog.typen;
   testateZeigen(r.katalog, alt.vorlage);
 

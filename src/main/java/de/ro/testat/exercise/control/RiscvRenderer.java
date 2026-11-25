@@ -65,16 +65,6 @@ public final class RiscvRenderer {
             return String.join("\n", lines);
         }
 
-        /** Erste Zeile (1-basiert), deren Befehl mit prefix beginnt; -1 wenn keine. */
-        public int lineStartingWith(String prefix) {
-            for (int i = 0; i < lines.size(); i++) {
-                if (lines.get(i).trim().startsWith(prefix)) {
-                    return i + 1;
-                }
-            }
-            return -1;
-        }
-
         public String line(int nr) {
             return lines.get(nr - 1).trim();
         }

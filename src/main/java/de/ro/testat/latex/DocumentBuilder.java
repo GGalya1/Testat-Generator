@@ -90,7 +90,8 @@ public final class DocumentBuilder {
             body.append("\\input{blaetter/").append(e.matrikel()).append("}\n");
             files.put("blaetter/" + e.matrikel() + ".tex", blatt(testat, e));
         }
-        String comment = "% " + testat.title() + " (" + werkName + "), Vorlage: " + testat.id() + "\n";
+        // Titel und Dateiname koennen vom Benutzer kommen: im Kommentar nur ohne Zeilenumbruch
+        String comment = "% " + einzeilig(testat.title()) + " (" + einzeilig(werkName) + "), Vorlage: " + testat.id() + "\n";
         files.put("main.tex", comment + "% Aufgabenblaetter zum Drucken\n" + document(false, body));
         files.put("loesungen.tex", comment + "% Loesungen fuer Tutor:innen\n" + document(true, body));
         return files;
@@ -104,7 +105,7 @@ public final class DocumentBuilder {
     static String blatt(Testat testat, Entry e) {
         StringBuilder L = new StringBuilder();
         L.append("% Matrikelnummer ").append(e.matrikel()).append(f(", Seed %016x\n", e.seed()));
-        L.append("\\title[\\TestatKurztitel]{").append(testat.title()).append("}\n");
+        L.append("\\title[\\TestatKurztitel]{").append(Tex.text(testat.title())).append("}\n");
         L.append("\\subtitle{Matrikelnummer: \\texttt{").append(e.matrikel()).append('}')
                 .append(f("\\IfSolutionT{\\quad Seed: \\texttt{%016x}}}\n", e.seed()));
         L.append("\\author{\\TestatAutoren}\n");
@@ -125,6 +126,10 @@ public final class DocumentBuilder {
             L.append("\\end{task}\n\n");
         }
         return L.toString();
+    }
+
+    private static String einzeilig(String s) {
+        return s.replace('\r', ' ').replace('\n', ' ');
     }
 
     private static String zusatz(Testat testat) {

@@ -208,9 +208,12 @@ public final class CParser {
                 try {
                     v = t.startsWith("0x") || t.startsWith("0X") ? Long.parseLong(t.substring(2), 16)
                             : t.startsWith("0b") || t.startsWith("0B") ? Long.parseLong(t.substring(2), 2)
+                            : t.length() > 1 && t.charAt(0) == '0' ? Long.parseLong(t.substring(1), 8) // wie in C: 010 == 8
                             : Long.parseLong(t);
                 } catch (NumberFormatException e) {
-                    throw new SyntaxFehler(zeile, s0, "Ungueltige Zahl '" + t + "'");
+                    boolean oktal = t.length() > 1 && t.charAt(0) == '0' && Character.isDigit(t.charAt(1));
+                    throw new SyntaxFehler(zeile, s0, "Ungueltige Zahl '" + t + "'"
+                            + (oktal ? " (eine fuehrende 0 bedeutet in C eine Oktalzahl, nur Ziffern 0-7)" : ""));
                 }
                 if (v > 0xFFFF_FFFFL) {
                     throw new SyntaxFehler(zeile, s0, "Zahl " + t + " passt nicht in 32 Bit");

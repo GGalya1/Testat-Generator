@@ -30,7 +30,7 @@ Voraussetzung: Java 17 oder neuer.
 # Kommentare und Leerzeilen werden ignoriert
 mein-geheimer-schluessel-testat1-x8Fq2      <- optional, nur in der ersten Zeile
 123456
-234567
+234567   # Kommentar hinter einer Matrikelnummer ist erlaubt
 ```
 
 - **Mit Schlüssel:** Seed = HMAC-SHA256(Schlüssel, Thema | Matrikelnummer). Dieselbe Datei
@@ -41,8 +41,9 @@ mein-geheimer-schluessel-testat1-x8Fq2      <- optional, nur in der ersten Zeile
 - **Ohne Schlüssel:** zufällige Seeds. Reproduzierbar nur über die Zuordnungsdatei.
 - Der Schlüssel muss mindestens ein Zeichen enthalten, das keine Ziffer ist (so wird eine
   vertippte Matrikelnummer nie als Schlüssel gelesen). Empfohlen: ≥ 12 zufällige Zeichen.
-- Matrikelnummern: 6 oder 7 Ziffern. Ungültige Zeilen und Duplikate werden mit Warnung übersprungen.
-  Das Format steht in `WerkFile.MATRIKEL`.
+- Matrikelnummern: 6 oder 7 Ziffern, dahinter optional `# Kommentar` (z. B. der Name). Ungültige
+  Zeilen und Duplikate werden mit Warnung übersprungen. Das Format steht in `WerkFile.MATRIKEL`.
+  Der Schlüssel wird dagegen genau so genommen, wie er dasteht (ein `#` darin gehört dazu).
 
 ### Vorlagen und eigene Ketten
 
@@ -114,7 +115,8 @@ Dasselbe gibt es auf der Webseite unter „Code ausprobieren“ (`probelauf.html
 
 - **Assembler:** RV32I + M-Extension, Pseudobefehle (`li`, `la`, `mv`, `j`, `call`, `ret`, `beqz`,
   `bgt`, `ble`, …), `.text`/`.data` (`.word`, `.byte`, `.asciz`, …), `ecall` (1, 4, 11, 34, 10).
-  Start wie in RARS: `sp = 0x7FFFEFFC`, `gp = 0x10008000`, sonst 0. Ausgabe: geänderte Register,
+  Start wie in RARS: `sp = 0x7FFFEFFC`, `gp = 0x10008000`, sonst 0. Adressen ebenfalls wie in RARS
+  (`la`, `call`, `tail` und `li` mit mehr als 12 Bit belegen zwei Befehle). Ausgabe: geänderte Register,
   geschriebener Speicher, ecall-Ausgabe. Fehler: unbekannte Befehle/Register, falsche Operanden,
   Immediate außerhalb des Bereichs, fehlende/doppelte Marken (alle auf einmal, mit Zeile);
   nicht ausgerichteter Zugriff, ungültiger Sprung, Schrittlimit (Endlosschleife).
@@ -150,7 +152,7 @@ jwebserver -d <absoluter Pfad>/target/site   # lokal ansehen: http://127.0.0.1:8
   weil der JavaScript-Stack nicht mehr hergibt.
 - `web/` – die Seite: `index.html` + `app.js` (Übungsblätter), `probelauf.html` + `probelauf.js`
   (Code ausprobieren), `style.css` (eigenes CSS, ohne Framework), `verbindung.js` (Verbindung zum
-  Worker, für beide Seiten), `generator-worker.js` + `generator-kern.js` (Generator im Web Worker),
+  Worker) und `seite.js` (Statuszeile, localStorage) für beide Seiten, `generator-worker.js` + `generator-kern.js` (Generator im Web Worker),
   `zip.js` (ZIP ohne Bibliothek). Die LaTeX-Dateien aus `src/main/resources/latex` werden nach `target/site/latex` kopiert und von der Seite geladen.
 - Kontrolle: `WebReferenzTest` schreibt mit `-Pweb` die JVM-Ausgabe für feste Seeds (alle Vorlagen und
   Aufgabentypen) und für die Probelauf-Beispiele in `src/test/resources/probelauf`, `web/test/smoke.mjs` lässt dieselben Fälle durch `generator.js` laufen und
@@ -168,6 +170,10 @@ jwebserver -d <absoluter Pfad>/target/site   # lokal ansehen: http://127.0.0.1:8
 mvn package          # baut target/testat-generator.jar (+ target/testat-generator-probelauf.jar) und führt die Tests aus
 mvn test             # nur Tests
 ```
+
+Vor einem Refactoring `de.ro.testat.Fingerabdruck` (in `src/test/java`, per `main` starten) laufen
+lassen und die Ausgabe speichern, danach wieder: Die Prüfsummen aller Vorlagen, Aufgabentypen und
+Probelauf-Beispiele dürfen sich nur dort ändern, wo man absichtlich etwas geändert hat.
 
 `EncoderLlvmTest` vergleicht die Kodierung von ~2200 zufälligen Befehlen mit `llvm-mc`
 (LLVM-Assembler). Ist `llvm-mc` nicht installiert, wird der Test übersprungen.

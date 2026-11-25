@@ -29,4 +29,13 @@ class MainTest {
         // Leerzeichen in der Liste spielen keine Rolle
         assertEquals(echt, Main.seedKontext(Map.of("aufgaben", " cache-sim   vm ", "titel", "Testat 4"), t));
     }
+
+    @Test
+    void seedAusDerZuordnungsdatei() {
+        assertEquals(0x7a2b3c4d5e6f7081L, Main.hexSeed("7a2b3c4d5e6f7081"));
+        assertEquals(0x1a2bL, Main.hexSeed(" 0x1A2B "));
+        IllegalArgumentException e = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> Main.hexSeed("12g4"));
+        org.junit.jupiter.api.Assertions.assertTrue(e.getMessage().contains("Hexzahl"), e.getMessage());
+    }
 }

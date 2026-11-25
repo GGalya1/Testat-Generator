@@ -3,24 +3,25 @@ package de.ro.testat.exercise;
 import de.ro.testat.exercise.control.AssemblerToC;
 import de.ro.testat.exercise.control.CToAssembler;
 import de.ro.testat.exercise.cpu.MulticycleFsm;
+import de.ro.testat.exercise.cpu.NewInstructionFsm;
+import de.ro.testat.exercise.cpu.PipelineHazards;
+import de.ro.testat.exercise.cpu.SingleCycleTiming;
+import de.ro.testat.exercise.encoding.AsmToMachineCode;
+import de.ro.testat.exercise.encoding.MachineCodeToAsm;
 import de.ro.testat.exercise.functions.ArrayToAssembler;
 import de.ro.testat.exercise.functions.CallToAssembler;
+import de.ro.testat.exercise.functions.RecursionToAssembler;
+import de.ro.testat.exercise.functions.ShiftArithmetic;
+import de.ro.testat.exercise.functions.StackTrace;
 import de.ro.testat.exercise.memory.AccessTime;
 import de.ro.testat.exercise.memory.CacheParameters;
 import de.ro.testat.exercise.memory.CacheProgram;
 import de.ro.testat.exercise.memory.CacheSimulation;
 import de.ro.testat.exercise.memory.VirtualMemory;
 import de.ro.testat.exercise.memory.WritePolicy;
-import de.ro.testat.exercise.functions.RecursionToAssembler;
-import de.ro.testat.exercise.functions.ShiftArithmetic;
-import de.ro.testat.exercise.functions.StackTrace;
-import de.ro.testat.exercise.cpu.NewInstructionFsm;
-import de.ro.testat.exercise.cpu.PipelineHazards;
-import de.ro.testat.exercise.cpu.SingleCycleTiming;
-import de.ro.testat.exercise.encoding.AsmToMachineCode;
-import de.ro.testat.exercise.encoding.MachineCodeToAsm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -77,12 +78,14 @@ public final class Exercises {
         HELP.put(id, help);
     }
 
+    /** Alle Aufgabentypen in fester Reihenfolge (nur lesen). */
     public static Set<String> ids() {
-        return REGISTRY.keySet();
+        return Collections.unmodifiableSet(REGISTRY.keySet());
     }
 
+    /** id -> Hilfetext (nur lesen). */
     public static Map<String, String> help() {
-        return HELP;
+        return Collections.unmodifiableMap(HELP);
     }
 
     public static Exercise create(String id, String args) {

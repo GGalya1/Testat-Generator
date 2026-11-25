@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -22,7 +23,9 @@ import java.util.regex.Pattern;
  * </pre>
  *
  * Ist die erste (relevante) Zeile eine gueltige Matrikelnummer, gibt es keinen
- * Schluessel. Ein Schluessel muss mindestens ein Zeichen enthalten, das keine
+ * Schluessel. Hinter einer Matrikelnummer darf ein Kommentar stehen ({@code 1234567  # Name}).
+ * Ein Schluessel bleibt dagegen genau so, wie er dasteht (auch mit #), damit sich alte Seeds
+ * nicht aendern. Ein Schluessel muss mindestens ein Zeichen enthalten, das keine
  * Ziffer ist - so wird eine vertippte Matrikelnummer nie als Schluessel gelesen.
  */
 public record WerkFile(Optional<String> key, List<String> matrikel, List<String> warnings) {
@@ -30,6 +33,8 @@ public record WerkFile(Optional<String> key, List<String> matrikel, List<String>
     /** Format der Matrikelnummer: 6 oder 7 Ziffern (die TU Darmstadt vergibt 7-stellige Nummern). */
     public static final Pattern MATRIKEL = Pattern.compile("\\d{6,7}");
     private static final Pattern ONLY_DIGITS = Pattern.compile("\\d+");
+    /** Matrikelnummer mit Kommentar dahinter, z. B. "1234567  # Erika Mustermann". */
+    private static final Pattern MATRIKEL_MIT_KOMMENTAR = Pattern.compile("(\\d{6,7})\\s+#.*");
 
     public static WerkFile read(Path path) throws IOException {
         return parse(Files.readAllLines(path, StandardCharsets.UTF_8));
@@ -49,6 +54,10 @@ public record WerkFile(Optional<String> key, List<String> matrikel, List<String>
             }
             boolean isFirst = first;
             first = false;
+            Matcher mitKommentar = MATRIKEL_MIT_KOMMENTAR.matcher(line);
+            if (mitKommentar.matches()) {
+                line = mitKommentar.group(1);
+            }
 
             if (MATRIKEL.matcher(line).matches()) {
                 if (!nums.add(line)) {

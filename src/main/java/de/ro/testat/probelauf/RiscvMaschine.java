@@ -81,7 +81,7 @@ public final class RiscvMaschine {
     public static Ergebnis runStreng(Programm p, int maxSchritte, Map<Integer, Integer> startwerte, long seed) {
         RiscvMaschine m = new RiscvMaschine(p, 0);
         startwerte.forEach((r, v) -> m.x[r] = v);
-        m.streng = new java.util.Random(seed);
+        m.streng = new de.ro.testat.testat.JdkRandom(seed); // nicht java.util.Random: im Browser andere Folge
         return m.lauf(maxSchritte);
     }
 
@@ -166,8 +166,8 @@ public final class RiscvMaschine {
         }
     }
 
-    private static int adresse(int index) {
-        return RiscvParser.TEXT_BASE + 4 * index;
+    private int adresse(int index) {
+        return p.adresse(index);
     }
 
     /** Fuehrt einen Befehl aus, liefert den naechsten Befehlsindex. */
@@ -262,11 +262,11 @@ public final class RiscvMaschine {
         if (ziel == 0) {
             return ENDE_RET;
         }
-        int off = ziel - RiscvParser.TEXT_BASE;
-        if (off < 0 || off % 4 != 0 || off / 4 > p.befehle().size()) {
+        int index = p.index(ziel);
+        if (index < 0) {
             throw new Laufzeitfehler(String.format("Sprung an ungueltige Adresse 0x%08X (kein Befehl dort)", ziel));
         }
-        return off / 4;
+        return index;
     }
 
     private int ecall(int next) {

@@ -56,4 +56,19 @@ class WerkFileTest {
         assertEquals(List.of("2512345", "123456"), w.matrikel());
         assertEquals(1, w.warnings().size());
     }
+
+    /** Frueher wurde "1234567  # Anna" in der ersten Zeile still zum Schluessel, und Anna fehlte. */
+    @Test
+    void matrikelMitKommentarIstKeinSchluessel() {
+        WerkFile w = WerkFile.parse(List.of("1234567  # Anna", "2345678\t# Ben", "345678"));
+        assertFalse(w.key().isPresent());
+        assertEquals(List.of("1234567", "2345678", "345678"), w.matrikel());
+        assertTrue(w.warnings().isEmpty(), w.warnings().toString());
+    }
+
+    @Test
+    void schluesselMitRauteBleibtUnveraendert() {
+        WerkFile w = WerkFile.parse(List.of("mein # schluessel 42", "123456"));
+        assertEquals("mein # schluessel 42", w.key().orElseThrow());
+    }
 }

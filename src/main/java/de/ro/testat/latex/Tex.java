@@ -86,6 +86,26 @@ public final class Tex {
         return "0x" + Integer.toHexString(v).toUpperCase(Locale.ROOT);
     }
 
+    /**
+     * Freier Text (z. B. eine selbst eingegebene Ueberschrift) fuer LaTeX: Sonderzeichen werden
+     * maskiert, Zeilenumbrueche zu Leerzeichen. Umlaute bleiben (die Praeambel liest UTF-8).
+     */
+    public static String text(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\textbackslash{}");
+                case '{', '}', '#', '$', '%', '&', '_' -> sb.append('\\').append(c);
+                case '~' -> sb.append("\\textasciitilde{}");
+                case '^' -> sb.append("\\textasciicircum{}");
+                case '\n', '\r', '\t' -> sb.append(' ');
+                default -> sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
     /** Text in \texttt; % wird maskiert (sonst Kommentar in LaTeX). */
     public static String tt(String s) {
         return "\\texttt{" + s.replace("%", "\\%") + "}";

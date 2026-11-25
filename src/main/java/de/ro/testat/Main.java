@@ -10,6 +10,7 @@ import de.ro.testat.latex.DocumentBuilder;
 import de.ro.testat.testat.Templates;
 import de.ro.testat.testat.Testat;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -96,87 +97,111 @@ public final class Main {
         }
 
         Testat testat = buildTestat(opt);
-
-        // ---------------- Eingabe bestimmen
-        List<String> matrikel;
-        Optional<String> key;
-        Map<String, Long> fixedSeeds = new HashMap<>();
-        String baseName;
-        Path outDir;
-
-        if (opt.containsKey("seed")) {
-            String m = opt.get("matrikel");
-            if (m == null || !WerkFile.MATRIKEL.matcher(m).matches()) {
-                throw new IllegalArgumentException("--seed braucht --matrikel mit einer gueltigen Matrikelnummer.");
-            }
-            matrikel = List.of(m);
-            key = Optional.empty();
-            fixedSeeds.put(m, Long.parseUnsignedLong(opt.get("seed"), 16));
-            baseName = "einzeln_" + m;
-            outDir = Path.of(opt.getOrDefault("out", "."));
-        } else {
-            if (werkArg == null) {
-                System.out.print(USAGE);
-                return 2;
-            }
-            Path werk = Path.of(werkArg);
-            if (!Files.isRegularFile(werk)) {
-                throw new IllegalArgumentException("Datei nicht gefunden: " + werk);
-            }
-            WerkFile wf = WerkFile.read(werk);
-            wf.warnings().forEach(w -> System.out.println("Warnung: " + w));
-            matrikel = wf.matrikel();
-            key = wf.key();
-            String fn = werk.getFileName().toString();
-            baseName = fn.contains(".") ? fn.substring(0, fn.lastIndexOf('.')) : fn;
-            outDir = opt.containsKey("out") ? Path.of(opt.get("out")) : werk.toAbsolutePath().getParent();
+        Eingabe ein = opt.containsKey("seed") ? einzelnesBlatt(opt) : werkDatei(opt, werkArg);
+        if (ein == null) {
+            System.out.print(USAGE);
+            return 2;
         }
-
-        if (matrikel.isEmpty()) {
+        if (ein.matrikel().isEmpty()) {
             throw new IllegalArgumentException("Keine gueltige Matrikelnummer gefunden.");
         }
         System.out.println("Testat: " + testat.id() + "  [" + testat.describe() + "]");
-        if (key.isPresent()) {
+        if (ein.key().isPresent()) {
             System.out.println("Schluessel gefunden: Blaetter sind ueber Schluessel + Matrikelnummer reproduzierbar.");
-        } else if (fixedSeeds.isEmpty()) {
+        } else if (ein.festerSeed() == null) {
             System.out.println("Kein Schluessel: zufaellige Seeds. Reproduzierbar nur ueber die Zuordnungsdatei.");
         }
+        Blaetter blaetter = erzeugen(testat, seedKontext(opt, testat), ein);
+        schreiben(testat, ein, blaetter);
+        return 0;
+    }
 
-        // ---------------- Erzeugen
-        String kontext = seedKontext(opt, testat);
+    /** Wer ein Blatt bekommt und wohin die Dateien kommen. festerSeed nur bei --seed (dann genau ein Blatt). */
+    private record Eingabe(List<String> matrikel, Optional<String> key, Long festerSeed, String baseName, Path outDir) {
+    }
+
+    /** Erzeugte Blaetter und die Zeilen fuer die Zuordnungsdatei. */
+    private record Blaetter(List<DocumentBuilder.Entry> entries, List<MappingRow> rows) {
+    }
+
+    /** --seed / --matrikel: ein Blatt mit bekanntem Seed (aus der Zuordnungsdatei) neu erzeugen. */
+    private static Eingabe einzelnesBlatt(Map<String, String> opt) {
+        String m = opt.get("matrikel");
+        if (m == null || !WerkFile.MATRIKEL.matcher(m).matches()) {
+            throw new IllegalArgumentException("--seed braucht --matrikel mit einer gueltigen Matrikelnummer.");
+        }
+        return new Eingabe(List.of(m), Optional.empty(), hexSeed(opt.get("seed")), "einzeln_" + m,
+                Path.of(opt.getOrDefault("out", ".")));
+    }
+
+    /** Seed wie in der Zuordnungsdatei (Hexziffern), auch mit 0x davor. */
+    static long hexSeed(String s) {
+        String t = s.trim();
+        if (t.startsWith("0x") || t.startsWith("0X")) {
+            t = t.substring(2);
+        }
+        try {
+            return Long.parseUnsignedLong(t, 16);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("--seed erwartet eine Hexzahl wie in der Zuordnungsdatei "
+                    + "(z. B. 1a2b3c4d5e6f7081), gefunden: " + s);
+        }
+    }
+
+    /** .werk-Datei (optional Schluessel, dann Matrikelnummern); null, wenn keine angegeben ist. */
+    private static Eingabe werkDatei(Map<String, String> opt, String werkArg) throws IOException {
+        if (werkArg == null) {
+            return null;
+        }
+        Path werk = Path.of(werkArg);
+        if (!Files.isRegularFile(werk)) {
+            throw new IllegalArgumentException("Datei nicht gefunden: " + werk);
+        }
+        WerkFile wf = WerkFile.read(werk);
+        wf.warnings().forEach(w -> System.out.println("Warnung: " + w));
+        String fn = werk.getFileName().toString();
+        String baseName = fn.contains(".") ? fn.substring(0, fn.lastIndexOf('.')) : fn;
+        Path outDir = opt.containsKey("out") ? Path.of(opt.get("out")) : werk.toAbsolutePath().getParent();
+        return new Eingabe(wf.matrikel(), wf.key(), null, baseName, outDir);
+    }
+
+    /** Ein Blatt je Matrikelnummer; Seed fest (--seed), aus Schluessel abgeleitet oder zufaellig. */
+    private static Blaetter erzeugen(Testat testat, String kontext, Eingabe ein) {
         List<DocumentBuilder.Entry> entries = new ArrayList<>();
         List<MappingRow> rows = new ArrayList<>();
-        for (String m : matrikel) {
-            long seed = fixedSeeds.containsKey(m) ? fixedSeeds.get(m)
-                    : key.map(k -> SeedDeriver.derive(k, kontext, m)).orElseGet(SeedDeriver::random);
+        for (String m : ein.matrikel()) {
+            long seed = ein.festerSeed() != null ? ein.festerSeed()
+                    : ein.key().map(k -> SeedDeriver.derive(k, kontext, m)).orElseGet(SeedDeriver::random);
             List<Exercise.Part> parts = testat.generate(seed);
             entries.add(new DocumentBuilder.Entry(m, seed, parts));
             List<String> fragen = new ArrayList<>();
             for (int i = 0; i < parts.size(); i++) {
                 Exercise.Part p = parts.get(i);
-                rows.add(new MappingRow(m, testat.id(), testat.describe(), seed, key.isPresent(),
+                rows.add(new MappingRow(m, testat.id(), testat.describe(), seed, ein.key().isPresent(),
                         (i + 1) + " " + testat.exercises().get(i).describe(), p.frage(), p.antwort()));
                 fragen.add(p.frage());
             }
             System.out.printf("  %s  seed %016x  %s%n", m, seed, String.join("  |  ", fragen));
         }
+        return new Blaetter(entries, rows);
+    }
 
-        // ---------------- Schreiben
-        Files.createDirectories(outDir);
+    /** ShareLaTeX-Zip und Zuordnungsdatei, beide mit Zeitstempel im Namen. */
+    private static void schreiben(Testat testat, Eingabe ein, Blaetter blaetter) throws IOException {
+        Files.createDirectories(ein.outDir());
         String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        String name = baseName + "_" + testat.id() + "_" + stamp;
-        Path zip = outDir.resolve(name + ".zip");
-        Path csv = outDir.resolve(name + "_zuordnung.csv");
-        OutputWriter.writeZip(zip, DocumentBuilder.build(testat, baseName, entries));
-        OutputWriter.writeMapping(csv, rows);
+        String name = ein.baseName() + "_" + testat.id() + "_" + stamp;
+        Path zip = ein.outDir().resolve(name + ".zip");
+        Path csv = ein.outDir().resolve(name + "_zuordnung.csv");
+        OutputWriter.writeZip(zip, DocumentBuilder.build(testat, ein.baseName(), blaetter.entries()));
+        OutputWriter.writeMapping(csv, blaetter.rows());
 
         System.out.println();
-        System.out.println(matrikel.size() + " Blaetter erzeugt.");
+        System.out.println(ein.matrikel().size() + " Blaetter erzeugt.");
         System.out.println("  ShareLaTeX-Projekt: " + zip);
         System.out.println("    main.tex      -> Aufgabenblaetter zum Drucken");
         System.out.println("    loesungen.tex -> Loesungen (in ShareLaTeX: Menue -> Main document)");
         System.out.println("  Zuordnung:          " + csv + "   (nicht weitergeben, enthaelt Loesungen)");
-        return 0;
     }
 
     /**

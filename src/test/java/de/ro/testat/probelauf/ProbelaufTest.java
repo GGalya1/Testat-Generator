@@ -277,4 +277,40 @@ class ProbelaufTest {
         assertEquals(Probelauf.Sprache.ASM, Probelauf.erkenne("x.s", "a = 3;"));
         assertEquals(Probelauf.Sprache.C, Probelauf.erkenne("x.c", "li t0, 3"));
     }
+
+    /** Adressen wie in RARS: la, call, tail sind zwei Befehle, li zwei bei mehr als 12 Bit. */
+    @Test
+    void pseudobefehleBelegenAdressenWieInRars() {
+        RiscvParser.Programm p = RiscvParser.parse("""
+                    li    a0, 5000      # 0x00400000, lui + addi
+                    li    a3, -7        # 0x00400008, nur addi
+                    auipc a1, 0         # 0x0040000C
+                    call  f             # 0x00400010, auipc + jalr -> ra = 0x00400018
+                    la    a2, f         # 0x00400018, auipc + addi
+                    j     ende          # 0x00400020
+                f:  ret                 # 0x00400024
+                ende:
+                """);
+        assertTrue(p.fehlerfrei(), p.meldungen().toString());
+        RiscvMaschine.Ergebnis e = RiscvMaschine.run(p, 1000, 0);
+        assertEquals(0x0040000C, e.ende()[11]);
+        assertEquals(0x00400018, e.ende()[1]);
+        assertEquals(0x00400024, e.ende()[12]);
+        assertEquals(0x00400028, p.adresse(p.befehle().size()));
+        // jalr mitten in einen Pseudobefehl: dort beginnt kein Befehl
+        RiscvMaschine.Ergebnis mitten = RiscvMaschine.run(
+                RiscvParser.parse("la t0, x\naddi t0, t0, -12\njalr zero, 0(t0)\nx:"), 100, 0); // x = 0x00400010
+        assertTrue(mitten.meldungen().toString().contains("ungueltige Adresse 0x00400004"), mitten.meldungen().toString());
+    }
+
+    @Test
+    void oktalzahlenWieInC() {
+        CInterpreter.Ergebnis e = CInterpreter.run(CParser.parse("int a = 010;\nint b = 0;\nint c = 0x10;\n"), 1000);
+        assertEquals("8", e.variablen().get("a"));
+        assertEquals("0", e.variablen().get("b"));
+        assertEquals("16", e.variablen().get("c"));
+        CParser.SyntaxFehler f = org.junit.jupiter.api.Assertions.assertThrows(CParser.SyntaxFehler.class,
+                () -> CParser.parse("int a = 09;"));
+        assertTrue(f.getMessage().contains("Oktalzahl"), f.getMessage());
+    }
 }

@@ -87,6 +87,17 @@ class WebApiTest {
         assertFalse(WebApi.erzeugen(null, null, null, null).startsWith("{\"ok\":true"));
     }
 
+    /** Eigene Ueberschrift mit LaTeX-Sonderzeichen: frueher brach "50% ..." das Dokument ab. */
+    @Test
+    void ueberschriftWirdFuerLatexMaskiert() {
+        String json = WebApi.erzeugen("", "shift", "50% C & Asm #1_x ~^\\{}", "1");
+        assertTrue(json.startsWith("{\"ok\":true"), json);
+        // im JSON ist jeder Backslash verdoppelt
+        assertTrue(json.contains("\\\\title[\\\\TestatKurztitel]{50\\\\% C \\\\& Asm \\\\#1\\\\_x "
+                + "\\\\textasciitilde{}\\\\textasciicircum{}\\\\textbackslash{}\\\\{\\\\}}"), json);
+        assertTrue(json.contains("\"titel\":\"50% C & Asm #1_x ~^\\\\{}\""), json); // Anzeige unveraendert
+    }
+
     // ------------------------------------------------------------------ Probelauf
 
     @Test

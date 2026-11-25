@@ -6,13 +6,13 @@ import de.ro.testat.latex.Tex;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * "Cache-Zugriffe nachvollziehen": Eine Folge von Lesezugriffen auf einen kleinen Cache
@@ -153,7 +153,9 @@ public final class CacheSimulation implements Exercise {
             int s0 = rng.nextInt(muster.saetze);
             List<Integer> bloecke = new ArrayList<>(); // Blocknummern
             int imSatz = muster.wege + 1 + (muster.saetze == 1 ? rng.nextInt(2) : rng.nextInt(2));
-            Set<Integer> tags = new HashSet<>();
+            // TreeSet: aufsteigend wie bisher; HashSet war nur zufaellig sortiert (kleine Integer, eine
+            // Implementierungseigenschaft des JDK) - der Browser muss nicht dieselbe Reihenfolge liefern.
+            Set<Integer> tags = new TreeSet<>();
             while (tags.size() < imSatz) {
                 tags.add(rng.nextInt(Math.max(8, imSatz + 4)));
             }

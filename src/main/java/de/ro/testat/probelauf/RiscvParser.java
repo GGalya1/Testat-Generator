@@ -30,9 +30,24 @@ public final class RiscvParser {
     record Befehl(int zeile, String text, Op op, int rd, int rs1, int rs2, int imm, String marke) {
     }
 
-    /** Ergebnis des Einlesens. */
+    /**
+     * Ergebnis des Einlesens. adressen: Adresse jedes Befehls wie in RARS (li/la/call/tail koennen dort
+     * zwei echte Befehle sein), dazu am Ende die Adresse direkt hinter dem letzten Befehl.
+     */
     public record Programm(List<Befehl> befehle, Map<Integer, Byte> daten, Map<String, Integer> marken,
-                           List<Meldung> meldungen) {
+                           List<Meldung> meldungen, List<Integer> adressen) {
+
+        /** Adresse des Befehls mit diesem Index (index = Anzahl Befehle: Programmende). */
+        public int adresse(int index) {
+            return adressen.get(index);
+        }
+
+        /** Befehlsindex zu einer Adresse, -1 wenn dort kein Befehl beginnt (auch mitten in einem Pseudobefehl). */
+        public int index(int adresse) {
+            int i = java.util.Collections.binarySearch(adressen, adresse);
+            return i < 0 ? -1 : i;
+        }
+
         public boolean fehlerfrei() {
             return meldungen.stream().noneMatch(m -> m.art() == Meldung.Art.FEHLER);
         }
@@ -70,6 +85,7 @@ public final class RiscvParser {
     private final Map<Integer, Byte> daten = new LinkedHashMap<>();
     private final Map<String, Integer> marken = new LinkedHashMap<>();      // Name -> Adresse
     private final Map<String, Integer> markenZeile = new HashMap<>();
+    private final List<Integer> adressen = new ArrayList<>();
     private int datenAdresse = DATA_BASE;
     private int zeile;
 
@@ -80,15 +96,15 @@ public final class RiscvParser {
         RiscvParser p = new RiscvParser();
         p.lies(quelltext);
         p.meldungen.sort(java.util.Comparator.comparingInt(Meldung::zeile));
-        return new Programm(List.copyOf(p.befehle), p.daten, p.marken, p.meldungen);
+        return new Programm(List.copyOf(p.befehle), p.daten, p.marken, p.meldungen, List.copyOf(p.adressen));
     }
 
     private void lies(String quelltext) {
         String[] zeilen = quelltext.replace("\r", "").split("\n", -1);
         boolean text = true;
         // 1. Durchgang: Marken (Befehle zaehlen, Daten anlegen)
-        List<String[]> rest = new ArrayList<>();   // {zeilennummer, inhalt, bereich}
-        int index = 0;
+        List<String[]> rest = new ArrayList<>();   // {zeilennummer, inhalt}
+        int textAdresse = TEXT_BASE;
         for (int i = 0; i < zeilen.length; i++) {
             zeile = i + 1;
             String z = ohneKommentar(zeilen[i]);
@@ -98,7 +114,7 @@ public final class RiscvParser {
                 if (marken.containsKey(name)) {
                     fehler("Marke '" + name + "' ist doppelt definiert (zuerst in Zeile " + markenZeile.get(name) + ")");
                 } else {
-                    marken.put(name, text ? TEXT_BASE + 4 * index : datenAdresse);
+                    marken.put(name, text ? textAdresse : datenAdresse);
                     markenZeile.put(name, zeile);
                 }
                 z = z.substring(m.end());
@@ -129,8 +145,10 @@ public final class RiscvParser {
                 continue;
             }
             rest.add(new String[]{Integer.toString(zeile), z});
-            index++;
+            adressen.add(textAdresse);
+            textAdresse += 4 * groesse(z);
         }
+        adressen.add(textAdresse); // Programmende
         // 2. Durchgang: Befehle
         for (String[] r : rest) {
             zeile = Integer.parseInt(r[0]);
@@ -154,12 +172,36 @@ public final class RiscvParser {
                 continue;
             }
             boolean sprung = b.op() != Op.LA;
-            if (sprung && (adr < TEXT_BASE || adr > TEXT_BASE + 4 * befehle.size())) {
+            int ziel = sprung ? java.util.Collections.binarySearch(adressen, adr) : adr;
+            if (sprung && ziel < 0) {
                 fehler("'" + b.marke() + "' ist eine Datenmarke und kein Sprungziel");
                 continue;
             }
-            befehle.set(i, new Befehl(b.zeile(), b.text(), b.op(), b.rd(), b.rs1(), b.rs2(),
-                    sprung ? (adr - TEXT_BASE) / 4 : adr, b.marke()));
+            befehle.set(i, new Befehl(b.zeile(), b.text(), b.op(), b.rd(), b.rs1(), b.rs2(), ziel, b.marke()));
+        }
+    }
+
+    /**
+     * Wie viele echte Befehle RARS fuer diese Zeile erzeugt: la, call, tail immer zwei (auipc + ...),
+     * li zwei, wenn der Wert nicht in 12 Bit passt (lui + addi). Danach richten sich die Adressen.
+     */
+    private static int groesse(String z) {
+        String[] teile = z.trim().split("[,\\s]+");
+        switch (teile[0].toLowerCase(Locale.ROOT)) {
+            case "la", "call", "tail":
+                return 2;
+            case "li":
+                if (teile.length != 3) {
+                    return 1;
+                }
+                try {
+                    int v = (int) zahl(teile[2], Integer.MIN_VALUE, 0xFFFF_FFFFL);
+                    return v >= -2048 && v <= 2047 ? 1 : 2;
+                } catch (Fehler f) {
+                    return 1; // Fehler meldet der 2. Durchgang
+                }
+            default:
+                return 1;
         }
     }
 

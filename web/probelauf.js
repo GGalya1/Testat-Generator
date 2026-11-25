@@ -1,6 +1,7 @@
 // Bedienung der Seite "Code ausprobieren" (Probelauf). Ausgefuehrt wird im Web Worker
 // (generator-kern.js -> WebApi.ausfuehren), wie java -jar testat-generator-probelauf.jar.
 import { generatorStarten } from "./verbindung.js";
+import { gemerkt, meldung, merken } from "./seite.js";
 
 const SPEICHER = "probelauf-ro";
 
@@ -33,13 +34,8 @@ int main() {
 
 const $ = (s) => document.querySelector(s);
 const code = $("#code");
-const status = $("#status");
 const generator = generatorStarten();
 
-function meldung(text, fehler = false) {
-  status.className = fehler ? "status fehler" : "status";
-  status.textContent = text;
-}
 
 function sprache() {
   return document.querySelector('input[name="sprache"]:checked').value;
@@ -53,26 +49,14 @@ function spracheAnpassen() {
 
 // ---------------------------------------------------------------- Merken (nur in diesem Browser)
 
-function laden() {
-  try {
-    return JSON.parse(localStorage.getItem(SPEICHER)) ?? {};
-  } catch {
-    return {};
-  }
-}
-
 function speichern() {
   clearTimeout(merkenTimer);
-  try {
-    localStorage.setItem(SPEICHER, JSON.stringify({ quelle: code.value, sprache: sprache(), schritte: $("#schritte").checked }));
-  } catch {
-    // privater Modus o. ae.: dann eben nicht
-  }
+  merken(SPEICHER, { quelle: code.value, sprache: sprache(), schritte: $("#schritte").checked });
 }
 
 /** Beim Tippen nicht bei jedem Zeichen speichern; beim Ausfuehren und Verlassen sofort. */
 let merkenTimer = 0;
-function merken() {
+function spaeterSpeichern() {
   clearTimeout(merkenTimer);
   merkenTimer = setTimeout(speichern, 300);
 }
@@ -153,7 +137,7 @@ code.addEventListener("keydown", (e) => {
   }
   escGedrueckt = false;
 });
-code.addEventListener("input", merken);
+code.addEventListener("input", spaeterSpeichern);
 
 for (const b of document.querySelectorAll("[data-beispiel]")) {
   b.addEventListener("click", () => {
@@ -163,7 +147,7 @@ for (const b of document.querySelectorAll("[data-beispiel]")) {
     code.value = neu;
     document.querySelector(`input[name="sprache"][value="${b.dataset.beispiel}"]`).checked = true;
     spracheAnpassen();
-    merken();
+    spaeterSpeichern();
     code.focus();
     code.setSelectionRange(0, 0);
     code.scrollTop = 0;
@@ -172,7 +156,7 @@ for (const b of document.querySelectorAll("[data-beispiel]")) {
 
 // ---------------------------------------------------------------- Start
 
-const alt = laden();
+const alt = gemerkt(SPEICHER);
 if (typeof alt.quelle === "string") code.value = alt.quelle;
 if (["", "asm", "c"].includes(alt.sprache)) {
   document.querySelector(`input[name="sprache"][value="${alt.sprache}"]`).checked = true;
@@ -181,8 +165,8 @@ $("#schritte").checked = alt.schritte === true;
 spracheAnpassen();
 
 for (const r of document.querySelectorAll('input[name="sprache"]')) {
-  r.addEventListener("change", () => { spracheAnpassen(); merken(); });
+  r.addEventListener("change", () => { spracheAnpassen(); spaeterSpeichern(); });
 }
-$("#schritte").addEventListener("change", merken);
+$("#schritte").addEventListener("change", spaeterSpeichern);
 $("#formular").addEventListener("submit", ausfuehrenKlick);
 $("#ausfuehren").disabled = false;
