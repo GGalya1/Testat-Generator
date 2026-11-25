@@ -110,6 +110,8 @@ java -jar testat-generator-probelauf.jar loesung.s --schritte   # jeden Befehl m
 java -jar testat-generator.jar ausfuehren loesung.s         # dasselbe im Generator-jar
 ```
 
+Dasselbe gibt es auf der Webseite unter „Code ausprobieren“ (`probelauf.html`, siehe „Webseite“).
+
 - **Assembler:** RV32I + M-Extension, Pseudobefehle (`li`, `la`, `mv`, `j`, `call`, `ret`, `beqz`,
   `bgt`, `ble`, …), `.text`/`.data` (`.word`, `.byte`, `.asciz`, …), `ecall` (1, 4, 11, 34, 10).
   Start wie in RARS: `sp = 0x7FFFEFFC`, `gp = 0x10008000`, sonst 0. Ausgabe: geänderte Register,
@@ -129,7 +131,8 @@ java -jar testat-generator.jar ausfuehren loesung.s         # dasselbe im Genera
 ## Webseite für Übungsblätter
 
 Statische Seite, auf der Studierende Übungsblätter (ganzes Testat 1–4 oder eigene Auswahl, 1–10 Blätter)
-als ZIP für Overleaf erzeugen. Die vier Testate entsprechen den Vorlagen `grundlagen`, `funktionen`,
+als ZIP für Overleaf erzeugen und unter „Code ausprobieren“ eigenen Assembler- oder C-Code im
+Probelauf ausführen. Die vier Testate entsprechen den Vorlagen `grundlagen`, `funktionen`,
 `prozessor` und `speicherhierarchie` (Zuordnung in `web/app.js`, `TESTATE`). Der Generator wird mit [TeaVM](https://teavm.org) nach JavaScript
 übersetzt und läuft **komplett im Browser** – kein Server rechnet, nichts wird gesendet.
 Nur Übungsblätter mit zufälligen Seeds, Lösungen inklusive. Schlüssel, `.werk`-Dateien und
@@ -141,13 +144,16 @@ node web/test/smoke.mjs                 # generator.js gegen die JVM pruefen (ta
 jwebserver -d <absoluter Pfad>/target/site   # lokal ansehen: http://127.0.0.1:8000
 ```
 
-- `de.ro.testat.web.WebApi` – Schnittstelle für JavaScript (`katalog`, `setzeRessource`, `erzeugen`),
-  nur Strings/JSON über die Grenze. Läuft auch auf der JVM (`WebApiTest`).
-- `web/` – die Seite: `index.html`, `style.css` (eigenes CSS, ohne Framework), `app.js` (Bedienung), `generator-worker.js` + `generator-kern.js`
-  (Generator im Web Worker), `zip.js` (ZIP ohne Bibliothek). Die LaTeX-Dateien aus
-  `src/main/resources/latex` werden nach `target/site/latex` kopiert und von der Seite geladen.
+- `de.ro.testat.web.WebApi` – Schnittstelle für JavaScript (`katalog`, `setzeRessource`, `erzeugen`,
+  `ausfuehren` für den Probelauf), nur Strings/JSON über die Grenze. Läuft auch auf der JVM (`WebApiTest`).
+  Im Browser gilt für C eine Rekursionsgrenze von 500 Aufrufen (`WebApi.MAX_TIEFE_WEB`, Kommandozeile: 2000),
+  weil der JavaScript-Stack nicht mehr hergibt.
+- `web/` – die Seite: `index.html` + `app.js` (Übungsblätter), `probelauf.html` + `probelauf.js`
+  (Code ausprobieren), `style.css` (eigenes CSS, ohne Framework), `verbindung.js` (Verbindung zum
+  Worker, für beide Seiten), `generator-worker.js` + `generator-kern.js` (Generator im Web Worker),
+  `zip.js` (ZIP ohne Bibliothek). Die LaTeX-Dateien aus `src/main/resources/latex` werden nach `target/site/latex` kopiert und von der Seite geladen.
 - Kontrolle: `WebReferenzTest` schreibt mit `-Pweb` die JVM-Ausgabe für feste Seeds (alle Vorlagen und
-  Aufgabentypen), `web/test/smoke.mjs` lässt dieselben Fälle durch `generator.js` laufen und
+  Aufgabentypen) und für die Probelauf-Beispiele in `src/test/resources/probelauf`, `web/test/smoke.mjs` lässt dieselben Fälle durch `generator.js` laufen und
   vergleicht Zeichen für Zeichen.
 - Veröffentlichung: `.github/workflows/webseite.yml` baut bei jedem Push auf `main`, vergleicht und
   stellt `target/site` auf GitHub Pages (einmalig: Settings → Pages → Source: „GitHub Actions“).

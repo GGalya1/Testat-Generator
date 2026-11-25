@@ -3,6 +3,7 @@ package de.ro.testat.web;
 import de.ro.testat.exercise.Exercise;
 import de.ro.testat.exercise.Exercises;
 import de.ro.testat.latex.DocumentBuilder;
+import de.ro.testat.probelauf.Probelauf;
 import de.ro.testat.testat.Templates;
 import de.ro.testat.testat.Testat;
 import org.teavm.jso.JSExport;
@@ -26,6 +27,15 @@ public final class WebApi {
 
     /** Hoechstens so viele Blaetter auf einmal. */
     public static final int MAX_BLAETTER = 20;
+
+    /**
+     * Rekursionsgrenze fuer C im Probelauf auf der Webseite. Im Browser gibt es keinen Thread mit
+     * grossem Stack; der JavaScript-Stack reicht fuer etwa 800 Aufrufe (Kommandozeile: 2000).
+     */
+    public static final int MAX_TIEFE_WEB = 500;
+
+    /** Laengster Quelltext fuer den Probelauf (Zeichen). */
+    public static final int MAX_QUELLE = 50_000;
 
     /** Statische LaTeX-Dateien (praeambel.tex, ...), von der Webseite hereingereicht. */
     private static final Map<String, String> RESSOURCEN = new HashMap<>();
@@ -169,6 +179,62 @@ public final class WebApi {
             erstes = false;
         }
         return sb.append("}}").toString();
+    }
+
+    // ------------------------------------------------------------------ Probelauf
+
+    /**
+     * Probelauf: fuehrt eigenen Code aus, wie {@code java -jar testat-generator-probelauf.jar},
+     * ohne Bewertung.
+     *
+     * @param quelle   RISC-V-Assembler oder C
+     * @param sprache  "asm", "c" oder leer (am Inhalt erkennen)
+     * @param schritte "1" = bei Assembler jeden ausgefuehrten Befehl zeigen (wie --schritte)
+     * @return {@code {"ok":true,"sprache":"asm"|"c","erkannt":bool,"fehler":bool,"text":"..."}}
+     *         (fehler = Syntax- oder Laufzeitfehler im Programm) oder {@code {"ok":false,"fehler":"..."}}
+     */
+    @JSExport
+    public static String ausfuehren(String quelle, String sprache, String schritte) {
+        try {
+            return ausfuehrenOderFehler(quelle == null ? "" : quelle, leer(sprache), leer(schritte));
+        } catch (IllegalArgumentException e) {
+            return fehler(e.getMessage());
+        } catch (Throwable e) {
+            return fehler("Interner Fehler: " + e);
+        }
+    }
+
+    /** Wie {@link #ausfuehren}, aber ohne Fehler abzufangen. Nur zur Fehlersuche (web/test/smoke.mjs). */
+    @JSExport
+    public static String ausfuehrenOhneSchutz(String quelle, String sprache, String schritte) {
+        return ausfuehrenOderFehler(quelle == null ? "" : quelle, leer(sprache), leer(schritte));
+    }
+
+    private static String ausfuehrenOderFehler(String quelle, String sprache, String schritte) {
+        String q = !quelle.isEmpty() && quelle.charAt(0) == '\uFEFF' ? quelle.substring(1) : quelle;
+        if (q.trim().isEmpty()) {
+            throw new IllegalArgumentException("Bitte zuerst Code eingeben.");
+        }
+        if (q.length() > MAX_QUELLE) {
+            throw new IllegalArgumentException("Der Code ist zu lang (höchstens " + MAX_QUELLE + " Zeichen).");
+        }
+        Probelauf.Sprache sp;
+        boolean erkannt = false;
+        if (sprache.equals("asm")) {
+            sp = Probelauf.Sprache.ASM;
+        } else if (sprache.equals("c")) {
+            sp = Probelauf.Sprache.C;
+        } else if (sprache.isEmpty()) {
+            sp = Probelauf.erkenneAmInhalt(q);
+            erkannt = true;
+        } else {
+            throw new IllegalArgumentException("Unbekannte Sprache: " + sprache);
+        }
+        Probelauf.Bericht b = sp == Probelauf.Sprache.ASM
+                ? Probelauf.assembler(q, Probelauf.MAX_SCHRITTE_ASM, schritte.equals("1") ? Probelauf.SCHRITTE_ANZEIGEN : 0)
+                : Probelauf.c(q, Probelauf.MAX_SCHRITTE_C, MAX_TIEFE_WEB);
+        return "{\"ok\":true,\"sprache\":" + json(sp == Probelauf.Sprache.ASM ? "asm" : "c")
+                + ",\"erkannt\":" + erkannt + ",\"fehler\":" + b.fehler() + ",\"text\":" + json(b.text()) + "}";
     }
 
     // ------------------------------------------------------------------ Hilfen

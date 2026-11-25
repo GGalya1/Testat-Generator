@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code ausprobieren – Rechnerorganisation</title>
+  <meta name="description" content="Eigenen RISC-V-Assembler- oder C-Code im Browser ausführen und Fehler sehen, ohne Bewertung.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="probelauf.js"></script>
+</head>
+<body>
+  <main>
+    <nav class="reiter" aria-label="Bereiche">
+      <a href="./">Übungsblätter</a>
+      <a href="probelauf.html" aria-current="page">Code ausprobieren</a>
+    </nav>
+    <header class="kopf">
+      <h1>Code ausprobieren</h1>
+      <p class="einleitung">
+        Eigenen RISC-V-Assembler oder C-Code ausführen. Sie sehen Syntax- und Laufzeitfehler und die
+        Werte am Ende. Ob die Lösung stimmt, wird nicht geprüft – das entscheiden die Tutor:innen.
+      </p>
+    </header>
+
+    <form id="formular" novalidate autocomplete="off">
+      <fieldset>
+        <legend>Sprache</legend>
+        <div class="umschalter" role="radiogroup">
+          <label><input type="radio" name="sprache" value="" autocomplete="off" checked> Automatisch</label>
+          <label><input type="radio" name="sprache" value="asm" autocomplete="off"> Assembler</label>
+          <label><input type="radio" name="sprache" value="c" autocomplete="off"> C</label>
+        </div>
+      </fieldset>
+
+      <div class="code-feld">
+        <div class="code-kopf">
+          <label for="code">Code</label>
+          <span class="beispiele">
+            Beispiel:
+            <button type="button" class="leise" data-beispiel="asm">Assembler</button>
+            <button type="button" class="leise" data-beispiel="c">C</button>
+          </span>
+        </div>
+        <textarea id="code" rows="16" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off"
+                  maxlength="50000" aria-describedby="code-hilfe"
+                  placeholder="z. B.&#10;    addi t0, zero, 5&#10;    addi t1, t0, 1"></textarea>
+        <p id="code-hilfe" class="code-hilfe">Tab rückt ein. Zum Verlassen des Felds erst Esc, dann Tab.</p>
+      </div>
+
+      <label class="schritte">
+        <input type="checkbox" id="schritte">
+        Jeden ausgeführten Befehl zeigen (nur Assembler)
+      </label>
+
+      <div class="abschluss">
+        <button type="submit" id="ausfuehren" disabled>Ausführen</button>
+        <span class="taste">oder Strg + Enter</span>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <section id="bericht" class="bericht" hidden aria-labelledby="bericht-titel">
+      <div class="bericht-kopf">
+        <h2 id="bericht-titel">Ergebnis</h2>
+        <span id="bericht-info" class="bericht-info"></span>
+      </div>
+      <pre id="bericht-text" tabindex="0"></pre>
+    </section>
+
+    <section class="anleitung" aria-labelledby="umfang-titel">
+      <h2 id="umfang-titel">Was der Probelauf kann</h2>
+      <ul>
+        <li><strong>Assembler:</strong> RV32I mit M-Erweiterung, Pseudobefehle (<code>li</code>, <code>la</code>,
+          <code>mv</code>, <code>j</code>, <code>call</code>, <code>ret</code> …), <code>.data</code> mit
+          <code>.word</code>, <code>.asciz</code> …, <code>ecall</code> 1, 4, 11, 34, 35, 10.
+          Start wie in RARS: <code>sp = 0x7FFFEFFC</code>, <code>gp = 0x10008000</code>.</li>
+        <li><strong>C:</strong> <code>int</code>-Variablen und -Arrays, Funktionen (auch rekursiv), alle
+          Kontrollstrukturen, <code>printf</code> und <code>putchar</code>. Einzelne Anweisungen ohne
+          <code>main</code> gehen auch, wie in den Testat-Aufgaben.</li>
+        <li>Im Browser höchstens 500 Funktionsaufrufe ineinander (Kommandozeile: 2000).</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

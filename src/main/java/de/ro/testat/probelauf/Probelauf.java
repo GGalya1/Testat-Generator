@@ -21,6 +21,11 @@ public final class Probelauf {
 
     public enum Sprache { ASM, C }
 
+    /** Standard-Schrittlimits und Laenge der Befehlsliste bei --schritte (auch fuer die Webseite). */
+    public static final int MAX_SCHRITTE_ASM = 100_000;
+    public static final int MAX_SCHRITTE_C = 1_000_000;
+    public static final int SCHRITTE_ANZEIGEN = 300;
+
     public static final String USAGE = """
             Probelauf (eigenen Code ausfuehren, ohne Bewertung):
               java -jar testat-generator-probelauf.jar <datei> [--asm | --c] [--schritte] [--max <n>]
@@ -100,8 +105,8 @@ public final class Probelauf {
             sprache = erkenne(p.getFileName().toString(), quelle);
         }
         Bericht b = sprache == Sprache.ASM
-                ? assembler(quelle, max == null ? 100_000 : max, schritte ? 300 : 0)
-                : c(quelle, max == null ? 1_000_000 : max);
+                ? assembler(quelle, max == null ? MAX_SCHRITTE_ASM : max, schritte ? SCHRITTE_ANZEIGEN : 0)
+                : c(quelle, max == null ? MAX_SCHRITTE_C : max);
         System.out.println("=== Probelauf: " + p.getFileName() + " (" + (sprache == Sprache.ASM ? "RISC-V-Assembler" : "C")
                 + (erkannt ? ", erkannt" : "") + ") ===");
         System.out.println();
@@ -111,6 +116,11 @@ public final class Probelauf {
 
     /** Ergebnis als Text; fehler = Syntax- oder Laufzeitfehler. */
     public record Bericht(String text, boolean fehler) {
+    }
+
+    /** Sprache nur nach dem Inhalt (Webseite, dort gibt es keinen Dateinamen). */
+    public static Sprache erkenneAmInhalt(String quelle) {
+        return erkenne("", quelle);
     }
 
     /** Sprache nach Dateiendung, sonst nach Inhalt (C: Zeilen mit ';' am Ende oder geschweifte Klammern). */
@@ -153,8 +163,10 @@ public final class Probelauf {
         for (int r = 1; r < 32; r++) {
             if (e.ende()[r] != e.start()[r]) {
                 irgendwas = true;
-                sb.append(String.format("  %-4s x%-2d = %11d   (0x%08X)%s%n", RiscvParser.ABI[r], r, e.ende()[r], e.ende()[r],
-                        r == 2 ? String.format("   Start: 0x%08X", e.start()[r]) : ""));
+                sb.append("  ").append(links(RiscvParser.ABI[r], 4)).append(" x").append(links(Integer.toString(r), 2))
+                        .append(" = ").append(rechts(Integer.toString(e.ende()[r]), 11))
+                        .append("   (0x").append(hex8(e.ende()[r])).append(')')
+                        .append(r == 2 ? "   Start: 0x" + hex8(e.start()[r]) : "").append('\n');
             }
         }
         if (!irgendwas) {
@@ -162,7 +174,8 @@ public final class Probelauf {
         }
         if (!e.geschrieben().isEmpty()) {
             sb.append("\nSpeicher (geschriebene Woerter):\n");
-            e.geschrieben().forEach((a, v) -> sb.append(String.format("  0x%08X = %11d   (0x%08X)%n", a, v, v)));
+            e.geschrieben().forEach((a, v) -> sb.append("  0x").append(hex8(a)).append(" = ")
+                    .append(rechts(Integer.toString(v), 11)).append("   (0x").append(hex8(v)).append(")\n"));
         }
         if (!e.ausgabe().isEmpty()) {
             sb.append("\nAusgabe (ecall):\n").append(einruecken(e.ausgabe())).append("\n");
@@ -179,6 +192,11 @@ public final class Probelauf {
     // ------------------------------------------------------------------ C
 
     public static Bericht c(String quelle, int maxSchritte) {
+        return c(quelle, maxSchritte, CInterpreter.MAX_TIEFE);
+    }
+
+    /** Wie {@link #c(String, int)}, mit eigener Grenze fuer die Rekursionstiefe (Webseite). */
+    public static Bericht c(String quelle, int maxSchritte, int maxTiefe) {
         String[] zeilen = quelle.replace("\r", "").split("\n", -1);
         StringBuilder sb = new StringBuilder();
         CParser.Programm prog;
@@ -191,7 +209,7 @@ public final class Probelauf {
             return new Bericht(sb.toString(), true);
         }
         sb.append("Syntax: keine Fehler.\n");
-        CInterpreter.Ergebnis e = CInterpreter.run(prog, maxSchritte);
+        CInterpreter.Ergebnis e = CInterpreter.run(prog, maxSchritte, maxTiefe);
         sb.append("Ablauf: ").append(e.endeGrund()).append(", ").append(e.schritte()).append(" Schritte.\n");
         if (e.rueckgabe() != null) {
             sb.append("Rueckgabewert: ").append(e.rueckgabe()).append("\n");
@@ -200,7 +218,7 @@ public final class Probelauf {
         if (e.variablen().isEmpty()) {
             sb.append("  (keine)\n");
         }
-        e.variablen().forEach((k, v) -> sb.append(String.format("  %-10s = %s%n", k, v)));
+        e.variablen().forEach((k, v) -> sb.append("  ").append(links(k, 10)).append(" = ").append(v).append('\n'));
         if (!e.ausgabe().isEmpty()) {
             sb.append("\nAusgabe (printf):\n").append(einruecken(e.ausgabe())).append("\n");
         }
@@ -218,6 +236,24 @@ public final class Probelauf {
                 sb.append(m.format(zeilen)).append("\n");
             }
         }
+    }
+
+    // Spalten ohne String.format-Breiten und ohne %n: dieselbe Ausgabe auch im Browser (TeaVM)
+
+    /** Rechts mit Leerzeichen auf n Zeichen auffuellen (wie %-ns). */
+    static String links(String s, int n) {
+        return s.length() >= n ? s : s + " ".repeat(n - s.length());
+    }
+
+    /** Links mit Leerzeichen auf n Zeichen auffuellen (wie %ns / %nd). */
+    static String rechts(String s, int n) {
+        return s.length() >= n ? s : " ".repeat(n - s.length()) + s;
+    }
+
+    /** 8 Hex-Ziffern, Grossbuchstaben (wie %08X). */
+    static String hex8(int v) {
+        String h = Integer.toHexString(v).toUpperCase(Locale.ROOT);
+        return "0".repeat(8 - h.length()) + h;
     }
 
     private static String einruecken(String s) {

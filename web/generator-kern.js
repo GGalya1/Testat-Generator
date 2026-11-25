@@ -1,7 +1,7 @@
-// Kern: ruft den mit TeaVM nach JavaScript uebersetzten Java-Generator auf
-// (generator.js = de.ro.testat.web.WebApi) und packt das Ergebnis als ZIP.
+// Kern: ruft den mit TeaVM nach JavaScript uebersetzten Java-Code auf
+// (generator.js = de.ro.testat.web.WebApi): Uebungsblaetter als ZIP und den Probelauf.
 // Wird im Web Worker benutzt, notfalls auch direkt auf der Seite.
-import { katalog, setzeRessource, erzeugen } from "./generator.js";
+import { katalog, setzeRessource, erzeugen, ausfuehren } from "./generator.js";
 import { zipErstellen } from "./zip.js";
 
 let bereit = null;
@@ -38,4 +38,33 @@ export async function zipErzeugen(auftrag) {
   const zip = zipErstellen(r.dateien);
   return { ok: true, name: r.name, titel: r.titel, blaetter: r.blaetter, zip,
            dauer: Math.round(performance.now() - start) };
+}
+
+/**
+ * Probelauf (eigenen Code ausfuehren). Braucht keine LaTeX-Dateien.
+ * @param {{quelle:string, sprache?:""|"asm"|"c", schritte?:boolean}} auftrag
+ * @returns {{ok:true,sprache,erkannt,fehler:boolean,text,dauer}|{ok:false,fehler:string}}
+ */
+export function probelauf(auftrag) {
+  const start = performance.now();
+  let r;
+  try {
+    r = JSON.parse(ausfuehren(auftrag.quelle ?? "", auftrag.sprache ?? "", auftrag.schritte ? "1" : ""));
+  } catch (err) {
+    // z. B. RangeError, wenn der JavaScript-Stack trotz der Rekursionsgrenze nicht reicht
+    const text = String(err && err.message ? err.message : err);
+    return { ok: false, fehler: /stack|recursion/i.test(text)
+      ? "Das Programm ist zu tief verschachtelt für den Browser (zu viele Aufrufe oder zu lange Ausdrücke)."
+      : "Interner Fehler: " + text };
+  }
+  if (r.ok) r.dauer = Math.round(performance.now() - start);
+  return r;
+}
+
+/** Eine Anfrage von der Seite: "katalog", "erzeugen" oder "ausfuehren". */
+export async function bearbeiten(typ, auftrag) {
+  if (typ === "katalog") return { ok: true, katalog: await katalogLaden() };
+  if (typ === "erzeugen") return zipErzeugen(auftrag);
+  if (typ === "ausfuehren") return probelauf(auftrag);
+  return { ok: false, fehler: "Unbekannte Anfrage: " + typ };
 }

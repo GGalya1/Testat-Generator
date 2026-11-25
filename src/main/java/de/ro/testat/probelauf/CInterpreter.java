@@ -104,10 +104,15 @@ public final class CInterpreter {
     private final List<Meldung> meldungen = new ArrayList<>();
     private final Set<String> automatisch = new LinkedHashSet<>();
     private final int maxSchritte;
+    private final int maxTiefe;
     private int schritte;
 
-    private CInterpreter(int maxSchritte) {
+    /** Standard-Grenze fuer Rekursion (Kommandozeile, Thread mit grossem Stack). */
+    public static final int MAX_TIEFE = 2000;
+
+    private CInterpreter(int maxSchritte, int maxTiefe) {
         this.maxSchritte = maxSchritte;
+        this.maxTiefe = maxTiefe;
     }
 
     /** Wo ein Lauf ausgefuehrt wird, z. B. direkt oder in einem Thread mit grossem Stack. */
@@ -128,7 +133,15 @@ public final class CInterpreter {
     }
 
     public static Ergebnis run(Programm p, int maxSchritte) {
-        return ausfuehrung.ausfuehren(() -> new CInterpreter(maxSchritte).lauf(p));
+        return run(p, maxSchritte, MAX_TIEFE);
+    }
+
+    /**
+     * Wie {@link #run(Programm, int)}, aber mit eigener Grenze fuer die Rekursionstiefe. Die Webseite
+     * nimmt eine kleinere Grenze, weil der JavaScript-Stack im Browser nicht fuer 2000 Aufrufe reicht.
+     */
+    public static Ergebnis run(Programm p, int maxSchritte, int maxTiefe) {
+        return ausfuehrung.ausfuehren(() -> new CInterpreter(maxSchritte, maxTiefe).lauf(p));
     }
 
     private Ergebnis lauf(Programm p) {
@@ -564,8 +577,8 @@ public final class CInterpreter {
             throw new Laufzeitfehler(c.pos(), "'" + f.name() + "' erwartet " + f.params().size() + " Argument(e), uebergeben: "
                     + c.args().size());
         }
-        if (stapel.size() > 2000) {
-            throw new Laufzeitfehler(c.pos(), "Rekursion zu tief (mehr als 2000 Aufrufe) - endet die Rekursion?");
+        if (stapel.size() > maxTiefe) {
+            throw new Laufzeitfehler(c.pos(), "Rekursion zu tief (mehr als " + maxTiefe + " Aufrufe) - endet die Rekursion?");
         }
         Rahmen neu = new Rahmen(f.name());
         for (int i = 0; i < f.params().size(); i++) {

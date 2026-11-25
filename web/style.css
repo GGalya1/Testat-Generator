@@ -52,6 +52,24 @@ code { font-family: var(--mono); font-size: 0.92em; }
 
 /* ---------------------------------------------------------------- Kopf */
 
+/* Umschalten zwischen den beiden Seiten */
+.reiter {
+  display: flex;
+  gap: 1.4rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--linie);
+}
+.reiter a {
+  padding: 0.3rem 0 0.55rem;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--grau);
+  font-weight: 600;
+  text-decoration: none;
+}
+.reiter a:hover { color: var(--tinte); }
+.reiter a[aria-current="page"] { color: var(--tinte); border-bottom-color: var(--rs1); }
+
 .kopf { margin-bottom: 2.5rem; }
 .einleitung { margin-top: 0.9rem; max-width: 60ch; color: var(--grau); font-size: 1.07rem; }
 
@@ -253,14 +271,81 @@ button[type="submit"]:disabled { background: #9aa6b2; cursor: progress; }
 
 .anleitung { margin-top: 3rem; }
 .anleitung h2 { margin-bottom: 0.6rem; }
-.anleitung ol { margin: 0; padding-left: 1.3rem; max-width: 62ch; }
+.anleitung ol,
+.anleitung ul { margin: 0; padding-left: 1.3rem; max-width: 62ch; }
 .anleitung li + li { margin-top: 0.3rem; }
+
+/* ---------------------------------------------------------------- Probelauf */
+
+.code-feld { margin-top: 1.5rem; }
+.code-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.3rem 1rem;
+  margin-bottom: 0.35rem;
+}
+.code-kopf label { font-weight: 600; }
+.beispiele { color: var(--grau); font-size: 0.92rem; }
+.beispiele button { padding: 0.2rem 0.4rem; }
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 16rem;
+  resize: vertical;
+  font: 0.92rem/1.5 var(--mono);
+  color: inherit;
+  background: #fff;
+  border: 1px solid #b9c2cb;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  tab-size: 4;
+}
+.code-hilfe { margin-top: 0.35rem; color: var(--grau); font-size: 0.85rem; }
+
+.schritte { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; cursor: pointer; }
+.schritte input { accent-color: var(--rs1); width: 1.05rem; height: 1.05rem; margin: 0; }
+.schritte.aus { color: var(--grau); cursor: default; }
+
+.abschluss .taste { color: var(--grau); font-size: 0.88rem; align-self: center; }
+
+.bericht { margin-top: 2rem; }
+.bericht-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 1rem;
+  padding: 0.7rem 1rem;
+  border-left: 3px solid var(--grau);
+  background: #fff;
+}
+.ohne-fehler .bericht-kopf { border-left-color: var(--rs2); background: color-mix(in srgb, var(--rs2) 6%, #fff); }
+.mit-fehler .bericht-kopf { border-left-color: var(--fehler); background: color-mix(in srgb, var(--fehler) 6%, #fff); }
+.bericht-info { color: var(--grau); font-size: 0.9rem; }
+.bericht pre {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--linie);
+  border-top: 0;
+  font: 0.86rem/1.5 var(--mono);
+}
+.bericht pre span { display: inline; }
+.z-abschnitt { font-weight: 700; }
+.z-fehler { color: var(--fehler); }
+.z-hinweis { color: #92400e; }
+.z-meldung { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 
 @media (max-width: 30rem) {
   main { padding-top: 1.5rem; }
   .umschalter { display: flex; }
   .umschalter label { flex: 1; text-align: center; padding: 0.45rem 0.4rem; }
+  textarea { font-size: 16px; } /* iOS vergroessert sonst beim Antippen */
+  .abschluss .taste { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

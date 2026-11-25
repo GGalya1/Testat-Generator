@@ -1,4 +1,5 @@
-// Bedienung der Seite. Die eigentliche Arbeit macht generator-kern.js (im Web Worker).
+// Bedienung der Seite "Uebungsblaetter". Die eigentliche Arbeit macht generator-kern.js (im Web Worker).
+import { generatorStarten } from "./verbindung.js";
 
 // Die vier Testate. "vorlage" ist die Vorlage aus Templates.java, die das ganze Testat erzeugt;
 // "aufgaben" steht so auf der Karte (Reihenfolge wie auf dem Blatt).
@@ -30,65 +31,6 @@ const status = $("#status");
 function meldung(text, fehler = false) {
   status.className = fehler ? "status fehler" : "status";
   status.textContent = text;
-}
-
-// ---------------------------------------------------------------- Verbindung zum Generator
-
-function generatorStarten() {
-  let direkt = null;
-  const direktAusfuehren = async (typ, auftrag) => {
-    direkt ??= import("./generator-kern.js");
-    const kern = await direkt;
-    try {
-      return typ === "katalog" ? { ok: true, katalog: await kern.katalogLaden() } : await kern.zipErzeugen(auftrag);
-    } catch (err) {
-      return { ok: false, fehler: String(err && err.message ? err.message : err) };
-    }
-  };
-
-  let worker = null;
-  try {
-    worker = new Worker(new URL("generator-worker.js", import.meta.url), { type: "module" });
-  } catch {
-    worker = null;
-  }
-  if (!worker) return direktAusfuehren;
-
-  let naechste = 1;
-  const offen = new Map();
-  let ohneWorker = false;
-  // Anfragen erst schicken, wenn der Worker sein Modul geladen hat (meldet sich mit "bereit")
-  let workerBereit;
-  const bereit = new Promise((r) => { workerBereit = r; });
-  worker.onmessage = (e) => {
-    if (e.data.bereit) {
-      workerBereit();
-      return;
-    }
-    const eintrag = offen.get(e.data.id);
-    offen.delete(e.data.id);
-    eintrag?.fertig(e.data);
-  };
-  // Browser ohne Module-Worker: dasselbe direkt auf der Seite
-  worker.onerror = (e) => {
-    e.preventDefault();
-    ohneWorker = true;
-    worker.terminate();
-    for (const [id, eintrag] of offen) {
-      offen.delete(id);
-      direktAusfuehren(eintrag.typ, eintrag.auftrag).then(eintrag.fertig);
-    }
-  };
-  return (typ, auftrag) => {
-    if (ohneWorker) return direktAusfuehren(typ, auftrag);
-    return new Promise((fertig) => {
-      const id = naechste++;
-      offen.set(id, { typ, auftrag, fertig });
-      bereit.then(() => {
-        if (!ohneWorker && offen.has(id)) worker.postMessage({ id, typ, auftrag });
-      });
-    });
-  };
 }
 
 const generator = generatorStarten();

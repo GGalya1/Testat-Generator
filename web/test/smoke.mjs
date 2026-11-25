@@ -1,5 +1,6 @@
 // Prueft das mit TeaVM erzeugte generator.js in Node:
-//   1. Jeder Fall aus der JVM-Referenz (WebReferenzTest) liefert Zeichen fuer Zeichen dasselbe.
+//   1. Jeder Fall aus der JVM-Referenz (WebReferenzTest) liefert Zeichen fuer Zeichen dasselbe
+//      (Blaetter fuer alle Vorlagen und Aufgabentypen, dazu der Probelauf mit Beispielprogrammen).
 //   2. Zeitmessung je Vorlage.
 //   3. Ein ZIP wird gebaut (zum Pruefen mit "unzip -t").
 // Aufruf (nach mvn -Pweb package):  node web/test/smoke.mjs target/site target/web-referenz.jsonl
@@ -27,8 +28,11 @@ function unterschied(jvm, js) {
     return `JS-Ausgabe ist kein JSON: ${js.slice(0, 300)}`;
   }
   if (!b.ok) return `JS meldet Fehler: ${b.fehler}`;
-  for (const [datei, inhalt] of Object.entries(a.dateien)) {
-    const anders = b.dateien[datei];
+  // lange Texte: Blaetter (dateien) bzw. der Bericht im Probelauf (text)
+  const lang = a.dateien ? a.dateien : { text: a.text };
+  const langJs = a.dateien ? b.dateien ?? {} : { text: b.text };
+  for (const [datei, inhalt] of Object.entries(lang)) {
+    const anders = langJs[datei];
     if (anders === inhalt) continue;
     if (anders === undefined) return `Datei ${datei} fehlt in JS`;
     let i = 0;
@@ -37,7 +41,7 @@ function unterschied(jvm, js) {
     return `${datei}, Zeile ${zeile}:\n    JVM: ${JSON.stringify(inhalt.slice(Math.max(0, i - 60), i + 60))}\n    JS : ${JSON.stringify(anders.slice(Math.max(0, i - 60), i + 60))}`;
   }
   for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
-    if (k !== "dateien" && JSON.stringify(a[k]) !== JSON.stringify(b[k])) {
+    if (k !== "dateien" && k !== "text" && JSON.stringify(a[k]) !== JSON.stringify(b[k])) {
       return `Feld "${k}":\n    JVM: ${JSON.stringify(a[k]).slice(0, 200)}\n    JS : ${JSON.stringify(b[k]).slice(0, 200)}`;
     }
   }
@@ -54,18 +58,25 @@ for (const zeile of readFileSync(referenz, "utf8").split("\n")) {
   const t0 = performance.now();
   let aus;
   try {
-    aus = gen.erzeugen(f.vorlage, f.kette, "", f.seed);
+    aus = f.probelauf
+      ? gen.ausfuehren(f.quelle, f.sprache, f.schritte)
+      : gen.erzeugen(f.vorlage, f.kette, "", f.seed);
   } catch (e) {
     aus = JSON.stringify({ ok: false, fehler: "Ausnahme in JS: " + e });
   }
-  const name = f.vorlage || f.kette;
+  const name = f.probelauf ? "probelauf" : f.vorlage || f.kette;
+  const fall = f.probelauf
+    ? `${f.probelauf} (Sprache ${f.sprache || "erkannt"}${f.schritte ? ", Schritte" : ""})`
+    : `Seed ${f.seed}`;
   const z = zeiten.get(name) ?? [];
   z.push(performance.now() - t0);
   zeiten.set(name, z);
   if (aus === f.ausgabe) ok++;
   else {
-    fehler.push({ name, text: `${name} (Seed ${f.seed}): ${unterschied(f.ausgabe, aus)}` });
-    if (!ersterFehlerFall && aus.startsWith('{"ok":false')) ersterFehlerFall = f;
+    // Probelauf: je Beispielprogramm eine Gruppe, damit jede Abweichung im Log steht
+    const gruppe = f.probelauf ? `probelauf ${f.probelauf}` : name;
+    fehler.push({ name: gruppe, text: `${name} ${fall}: ${unterschied(f.ausgabe, aus)}` });
+    if (!ersterFehlerFall && aus.startsWith('{"ok":false')) ersterFehlerFall = { ...f, fall };
   }
 }
 
@@ -81,9 +92,11 @@ if (beispiel.ok) writeFileSync(join(site, "..", "smoke.zip"), zipErstellen(beisp
 console.log(`\n${ok} von ${ok + fehler.length} Faellen gleich wie auf der JVM.`);
 if (ersterFehlerFall) {
   // Denselben Fall noch einmal ohne Abfangen in Java: zeigt, wo es im Code passiert
-  console.log(`\nStack fuer ${ersterFehlerFall.vorlage || ersterFehlerFall.kette} (Seed ${ersterFehlerFall.seed}):`);
+  const f = ersterFehlerFall;
+  console.log(`\nStack fuer ${f.probelauf ? "probelauf" : f.vorlage || f.kette} ${f.fall}:`);
   try {
-    gen.erzeugenOhneSchutz(ersterFehlerFall.vorlage, ersterFehlerFall.kette, "", ersterFehlerFall.seed);
+    if (f.probelauf) gen.ausfuehrenOhneSchutz(f.quelle, f.sprache, f.schritte);
+    else gen.erzeugenOhneSchutz(f.vorlage, f.kette, "", f.seed);
     console.log("  (ohne Abfangen kein Fehler)");
   } catch (e) {
     const stack = String((e && e.stack) || e).split("\n").slice(0, 30);

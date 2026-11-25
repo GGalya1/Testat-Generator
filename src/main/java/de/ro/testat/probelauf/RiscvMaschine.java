@@ -285,7 +285,7 @@ public final class RiscvMaschine {
             }
             case 11 -> ausgabe.append((char) (a0 & 0xFF));
             case 34 -> ausgabe.append(String.format("0x%08x", a0));
-            case 35 -> ausgabe.append(String.format("%32s", Integer.toBinaryString(a0)).replace(' ', '0'));
+            case 35 -> ausgabe.append(Probelauf.rechts(Integer.toBinaryString(a0), 32).replace(' ', '0'));
             case 36 -> ausgabe.append(Integer.toUnsignedString(a0));
             case 10, 93 -> {
                 return ENDE_ECALL;
@@ -350,7 +350,8 @@ public final class RiscvMaschine {
     }
 
     private String traceZeile(Befehl i, int pc, int[] vorher) {
-        StringBuilder sb = new StringBuilder(String.format("%08X  Z.%-3d %-28s", adresse(pc), i.zeile(), i.text()));
+        StringBuilder sb = new StringBuilder(Probelauf.hex8(adresse(pc)) + "  Z." + Probelauf.links(Integer.toString(i.zeile()), 3)
+                + " " + Probelauf.links(i.text(), 28));
         for (int r = 1; r < 32; r++) {
             if (vorher[r] != x[r]) {
                 sb.append("  ").append(RiscvParser.ABI[r]).append(": ").append(vorher[r]).append(" -> ").append(x[r]);

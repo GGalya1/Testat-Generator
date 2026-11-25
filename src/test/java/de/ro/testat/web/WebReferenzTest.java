@@ -11,12 +11,15 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Schreibt Referenz-Ausgaben der WebApi (JVM) fuer feste Seeds, eine JSON-Zeile pro Fall.
+ * Schreibt Referenz-Ausgaben der WebApi (JVM) fuer feste Seeds und die Probelauf-Beispiele
+ * (src/test/resources/probelauf), eine JSON-Zeile pro Fall.
  * web/test/smoke.mjs laesst dieselben Faelle durch das TeaVM-JavaScript laufen und vergleicht
  * Zeichen fuer Zeichen. Laeuft nur mit -Pweb (dort wird die Systemeigenschaft gesetzt).
  */
@@ -24,6 +27,9 @@ class WebReferenzTest {
 
     static final int SEEDS_JE_VORLAGE = 10;
     static final int SEEDS_JE_TYP = 5;
+
+    /** Beispielprogramme fuer den Probelauf (richtige, mit Syntax- und Laufzeitfehlern). */
+    static final String PROBELAUF = "/probelauf";
 
     @Test
     void referenzSchreiben() throws IOException {
@@ -48,8 +54,36 @@ class WebReferenzTest {
                     faelle += fall(w, "", typ, seed(i, typ));
                 }
             }
+            for (Path datei : probelaufDateien()) {
+                String quelle = Files.readString(datei, StandardCharsets.UTF_8);
+                String name = datei.getFileName().toString();
+                faelle += probelauf(w, name, quelle, "", "");
+                if (name.endsWith(".s")) {
+                    faelle += probelauf(w, name, quelle, "", "1");
+                    faelle += probelauf(w, name, quelle, "c", ""); // Assembler als C: Syntaxfehler
+                } else {
+                    faelle += probelauf(w, name, quelle, "c", "");
+                }
+            }
         }
         assertTrue(faelle > 0);
+    }
+
+    static List<Path> probelaufDateien() throws IOException {
+        try (Stream<Path> s = Files.list(Path.of(WebReferenzTest.class.getResource(PROBELAUF).toURI()))) {
+            return s.sorted().toList();
+        } catch (java.net.URISyntaxException e) {
+            throw new IOException(e);
+        }
+    }
+
+    private static int probelauf(Writer w, String name, String quelle, String sprache, String schritte) throws IOException {
+        String aus = WebApi.ausfuehren(quelle, sprache, schritte);
+        assertTrue(aus.startsWith("{\"ok\":true"), name + ": " + aus);
+        w.write("{\"probelauf\":" + WebApi.json(name) + ",\"quelle\":" + WebApi.json(quelle)
+                + ",\"sprache\":" + WebApi.json(sprache) + ",\"schritte\":" + WebApi.json(schritte)
+                + ",\"ausgabe\":" + WebApi.json(aus) + "}\n");
+        return 1;
     }
 
     private static String seed(int i, String text) {
