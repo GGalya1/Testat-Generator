@@ -48,6 +48,23 @@
         <button type="button" id="aufgabe-dazu" class="leise">Aufgabe hinzufügen</button>
       </section>
 
+      <fieldset class="seed-wahl">
+        <legend>Aufgaben</legend>
+        <div class="umschalter" role="radiogroup">
+          <label><input type="radio" name="seedmodus" value="zufall" autocomplete="off" checked> Zufällig</label>
+          <label><input type="radio" name="seedmodus" value="eigen" autocomplete="off"> Seed eingeben</label>
+        </div>
+        <div id="seed-feld" class="seed-feld" hidden>
+          <label for="seed">Seed</label>
+          <input id="seed" type="text" maxlength="20" placeholder="z. B. 28f75d14275fd065"
+                 autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="seed-hilfe">
+          <p id="seed-hilfe" class="seed-hilfe">
+            Gleiches Testat (bzw. gleiche eigene Auswahl) und gleicher Seed ergeben genau dasselbe Blatt.
+            Den Seed eines Blatts sehen Sie nach dem Erzeugen unter „Fertig“.
+          </p>
+        </div>
+      </fieldset>
+
       <div class="abschluss">
         <label class="anzahl">
           <span>Anzahl Blätter</span>
@@ -62,7 +79,7 @@
       <h2 id="ergebnis-titel">Fertig</h2>
       <p><a id="download" class="download" href="#" download>ZIP herunterladen</a></p>
       <ul id="blaetter" class="blaetter"></ul>
-      <p class="hinweis">Jeder Klick auf „ZIP erzeugen“ würfelt neue Aufgaben aus.</p>
+      <p id="ergebnis-hinweis" class="hinweis"></p>
     </section>
 
     <section class="anleitung" aria-labelledby="anleitung-titel">

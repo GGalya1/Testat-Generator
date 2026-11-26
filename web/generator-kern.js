@@ -26,12 +26,13 @@ function zufallsSeed() {
 }
 
 /**
- * @param {{vorlage?:string, kette?:string, titel?:string, anzahl:number}} auftrag
+ * @param {{vorlage?:string, kette?:string, titel?:string, anzahl:number, seeds?:string[]}} auftrag
+ *        seeds: feste Seeds (Hex, je einer ein Blatt), sonst anzahl zufaellige
  * @returns {Promise<{ok:true,name,titel,blaetter,zip:Uint8Array,dauer}|{ok:false,fehler:string}>}
  */
 export async function zipErzeugen(auftrag) {
   await katalogLaden();
-  const seeds = Array.from({ length: auftrag.anzahl }, zufallsSeed).join(",");
+  const seeds = (auftrag.seeds?.length ? auftrag.seeds : Array.from({ length: auftrag.anzahl }, zufallsSeed)).join(",");
   const start = performance.now();
   const r = JSON.parse(erzeugen(auftrag.vorlage ?? "", auftrag.kette ?? "", auftrag.titel ?? "", seeds));
   if (!r.ok) return { ok: false, fehler: r.fehler };

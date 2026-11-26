@@ -140,6 +140,30 @@ function modusZeigen() {
   $("#bereich-eigen").hidden = !eigen;
 }
 
+/** "zufall" oder "eigen" (Seed eingeben: genau ein Blatt mit diesem Seed). */
+function seedModus() {
+  return document.querySelector('input[name="seedmodus"]:checked').value;
+}
+
+function seedModusZeigen() {
+  const eigen = seedModus() === "eigen";
+  $("#seed-feld").hidden = !eigen;
+  $(".anzahl").hidden = eigen;
+}
+
+/** Eingegebener Seed als Hex (wie unter "Fertig" angezeigt), 0x und Leerzeichen erlaubt; sonst null. */
+function seedLesen() {
+  const s = $("#seed").value.replace(/\s+/g, "").replace(/^0x/i, "").toLowerCase();
+  return /^[0-9a-f]{1,16}$/.test(s) ? s : null;
+}
+
+/** Wie man das Blatt weitergibt: Testat-Nummer bzw. "eigene Auswahl", dazu der Seed. */
+function teilenText(auftrag) {
+  if (auftrag.modus === "eigen") return "dieselbe eigene Auswahl";
+  const t = TESTATE.find((x) => x.vorlage === auftrag.vorlage);
+  return t ? `Testat ${t.nr}` : "dieselbe Vorlage";
+}
+
 // ---------------------------------------------------------------- Erzeugen
 
 function auftragLesen() {
@@ -163,13 +187,24 @@ async function erzeugenKlick(e) {
   e.preventDefault();
   const knopf = $("#erzeugen");
   const auftrag = auftragLesen();
+  let seeds;
+  if (seedModus() === "eigen") {
+    const seed = seedLesen();
+    if (!seed) {
+      meldung("Ein Seed besteht aus 1 bis 16 Hex-Ziffern (0–9, a–f), z. B. 28f75d14275fd065.", true);
+      $("#seed").focus();
+      return;
+    }
+    seeds = [seed];
+  }
   merken(SPEICHER, auftrag); // eigene Auswahl bleibt, wenn ein ganzes Testat erzeugt wird
+  if (seeds) auftrag.anzahl = 1; // gemerkte Anzahl bleibt fuer "Zufaellig"
   knopf.disabled = true;
   meldung(auftrag.anzahl === 1 ? "Blatt wird erzeugt …" : `${auftrag.anzahl} Blätter werden erzeugt …`);
 
   const r = await generator("erzeugen", auftrag.modus === "vorlage"
-    ? { vorlage: auftrag.vorlage, anzahl: auftrag.anzahl }
-    : { kette: auftrag.kette, titel: auftrag.titel, anzahl: auftrag.anzahl });
+    ? { vorlage: auftrag.vorlage, anzahl: auftrag.anzahl, seeds }
+    : { kette: auftrag.kette, titel: auftrag.titel, anzahl: auftrag.anzahl, seeds });
   knopf.disabled = false;
 
   if (!r.ok) {
@@ -192,13 +227,38 @@ async function erzeugenKlick(e) {
     li.append(`Blatt ${i + 1}: ${r.titel}, Seed `);
     const c = document.createElement("code");
     c.textContent = b.seed;
-    li.append(c);
+    li.append(c, " ", kopierKnopf(b.seed));
     liste.append(li);
   });
+  $("#ergebnis-hinweis").textContent = seeds
+    ? "Mit diesem Seed entsteht immer genau dieses Blatt."
+    : `Jeder Klick auf „ZIP erzeugen“ würfelt neue Aufgaben aus. Zum Teilen: ${teilenText(auftrag)} wählen, `
+      + "„Seed eingeben“ und den Seed eintragen – dann entsteht dasselbe Blatt.";
   $("#ergebnis-titel").textContent = r.blaetter.length === 1 ? "1 Blatt erzeugt" : `${r.blaetter.length} Blätter erzeugt`;
   $("#ergebnis").hidden = false;
   meldung(`Fertig in ${r.dauer} ms. Der Download startet automatisch.`);
   link.click();
+}
+
+/** Knopf, der den Seed in die Zwischenablage kopiert. */
+function kopierKnopf(seed) {
+  const k = document.createElement("button");
+  k.type = "button";
+  k.className = "leise kopieren";
+  k.textContent = "Kopieren";
+  k.setAttribute("aria-label", `Seed ${seed} kopieren`);
+  k.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(seed);
+      k.textContent = "Kopiert";
+    } catch {
+      // ohne Zwischenablage (z. B. http): Seed markieren, dann Strg+C
+      getSelection().selectAllChildren(k.previousElementSibling);
+      k.textContent = "Markiert – Strg+C";
+    }
+    setTimeout(() => { k.textContent = "Kopieren"; }, 2000);
+  });
+  return k;
 }
 
 // ---------------------------------------------------------------- Start
@@ -222,6 +282,15 @@ async function start() {
   // die eigene Auswahl selbst bleibt gemerkt und steht beim Umschalten wieder da.
   document.querySelector('input[name="modus"][value="vorlage"]').checked = true;
   modusZeigen();
+  // Seed nur auf ausdruecklichen Wunsch: beim Laden immer "Zufaellig"
+  document.querySelector('input[name="seedmodus"][value="zufall"]').checked = true;
+  seedModusZeigen();
+  for (const r of document.querySelectorAll('input[name="seedmodus"]')) {
+    r.addEventListener("change", () => {
+      seedModusZeigen();
+      if (seedModus() === "eigen") $("#seed").focus();
+    });
+  }
 
   for (const r of document.querySelectorAll('input[name="modus"]')) r.addEventListener("change", modusZeigen);
   $("#aufgabe-dazu").addEventListener("click", () => aufgabeHinzufuegen()?.focus());

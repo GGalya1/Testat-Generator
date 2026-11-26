@@ -132,7 +132,8 @@ Dasselbe gibt es auf der Webseite unter „Code ausprobieren“ (`probelauf.html
 
 ## Webseite für Übungsblätter
 
-Statische Seite, auf der Studierende Übungsblätter (ganzes Testat 1–4 oder eigene Auswahl, 1–10 Blätter)
+Statische Seite, auf der Studierende Übungsblätter (ganzes Testat 1–4 oder eigene Auswahl, 1–10 Blätter
+mit zufälligem Seed, oder ein Blatt zu einem eingegebenen Seed, um Blätter untereinander zu teilen)
 als ZIP für Overleaf erzeugen und unter „Code ausprobieren“ eigenen Assembler- oder C-Code im
 Probelauf ausführen. Die vier Testate entsprechen den Vorlagen `grundlagen`, `funktionen`,
 `prozessor` und `speicherhierarchie` (Zuordnung in `web/app.js`, `TESTATE`). Der Generator wird mit [TeaVM](https://teavm.org) nach JavaScript

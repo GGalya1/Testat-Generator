@@ -75,6 +75,9 @@ code { font-family: var(--mono); font-size: 0.92em; }
 
 /* ---------------------------------------------------------------- Formular */
 
+/* hidden gilt immer, auch wenn eine Klasse display setzt (.anzahl, .seed-feld) */
+[hidden] { display: none !important; }
+
 fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 legend { font-size: 1.25rem; font-weight: 700; padding: 0; margin-bottom: 0.75rem; }
 
@@ -239,6 +242,15 @@ button.leise:hover { border-color: var(--linie); background: #fff; }
   gap: 1rem 1.5rem;
 }
 .anzahl { display: grid; gap: 0.3rem; font-weight: 600; }
+
+/* Zufaellig oder eigener Seed */
+.seed-wahl { margin-top: 2rem; }
+.seed-wahl legend { font-size: 1.05rem; margin-bottom: 0.6rem; }
+.seed-feld { display: grid; gap: 0.3rem; margin-top: 0.9rem; max-width: 24rem; }
+.seed-feld label { font-weight: 600; }
+.seed-feld input { font-family: var(--mono); letter-spacing: 0.02em; }
+.seed-hilfe { color: var(--grau); font-size: 0.88rem; }
+.blaetter .kopieren { margin-left: 0.2rem; padding: 0.05rem 0.45rem; font-size: 0.85rem; }
 
 button[type="submit"] {
   background: var(--rs1);
