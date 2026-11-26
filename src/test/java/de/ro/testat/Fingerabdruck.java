@@ -56,8 +56,9 @@ public final class Fingerabdruck {
             String q = Files.readString(p, StandardCharsets.UTF_8);
             for (String sprache : new String[]{"", "asm", "c"}) {
                 for (String schritte : new String[]{"", "1"}) {
-                    pl.append(WebApi.ausfuehren(q, sprache, schritte)).append('\n');
+                    pl.append(WebApi.ausfuehren(q, sprache, schritte, "")).append('\n');
                 }
+                pl.append(WebApi.ausfuehren(q, sprache, "", "1")).append('\n'); // strenger Modus
             }
         }
         System.out.println("probelauf " + sha(pl));

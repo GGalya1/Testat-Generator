@@ -48,9 +48,15 @@
         <p id="code-hilfe" class="code-hilfe">Tab rückt ein. Zum Verlassen des Felds erst Esc, dann Tab.</p>
       </div>
 
-      <label class="schritte">
+      <label class="option nur-asm">
         <input type="checkbox" id="schritte">
         Jeden ausgeführten Befehl zeigen (nur Assembler)
+      </label>
+      <label class="option nur-asm">
+        <input type="checkbox" id="streng">
+        <span>Strenger Modus (prüft zusätzlich die Aufrufkonvention: <code>sp</code>, <code>ra</code> und
+          <code>s0</code>–<code>s11</code> müssen nach dem Rücksprung erhalten sein, <code>t0</code>–<code>t6</code>
+          und <code>a1</code>–<code>a7</code> gelten nach einem Aufruf als überschrieben; nur Assembler)</span>
       </label>
 
       <div class="abschluss">
@@ -78,6 +84,10 @@
         <li><strong>C:</strong> <code>int</code>-Variablen und -Arrays, Funktionen (auch rekursiv), alle
           Kontrollstrukturen, <code>printf</code> und <code>putchar</code>. Einzelne Anweisungen ohne
           <code>main</code> gehen auch, wie in den Testat-Aufgaben.</li>
+        <li><strong>Strenger Modus</strong> (nur Assembler): meldet Verstöße gegen die Aufrufkonvention mit
+          Zeile, z.&nbsp;B. ein <code>s</code>-Register, das die Funktion nicht wiederherstellt, ein nicht
+          gesichertes <code>ra</code>, einen nicht freigegebenen Stack oder ein <code>t</code>-Register, das nach
+          einem Aufruf noch verwendet wird. Die Werte am Ende sind dieselben wie ohne strengen Modus.</li>
         <li>Im Browser höchstens 500 Funktionsaufrufe ineinander (Kommandozeile: 2000).</li>
       </ul>
     </section>

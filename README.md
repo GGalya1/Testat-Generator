@@ -108,6 +108,7 @@ java -jar testat-generator-probelauf.jar loesung.s          # eigenes kleines ja
 java -jar testat-generator-probelauf.jar loesung.txt        # Sprache wird erkannt (C: ';' oder {})
 java -jar testat-generator-probelauf.jar loesung.txt --c    # Sprache erzwingen (--asm / --c)
 java -jar testat-generator-probelauf.jar loesung.s --schritte   # jeden Befehl mit Registeränderung zeigen
+java -jar testat-generator-probelauf.jar loesung.s --streng     # zusätzlich die Aufrufkonvention prüfen
 java -jar testat-generator.jar ausfuehren loesung.s         # dasselbe im Generator-jar
 ```
 
@@ -126,6 +127,14 @@ Dasselbe gibt es auf der Webseite unter „Code ausprobieren“ (`probelauf.html
   Testat-Aufgaben; es gibt einen Hinweis). Fehler: erster Syntaxfehler mit Zeile/Spalte; zur
   Laufzeit Lesen ohne Wert, nicht deklarierte Variable, Division durch 0, Index außerhalb,
   Endlosschleife, zu tiefe Rekursion.
+- **Strenger Modus** (`--streng`, auf der Webseite eine Option; nur Assembler): prüft zusätzlich die
+  Aufrufkonvention und meldet jeden Verstoß als FEHLER mit Zeile:
+  `sp` oder `s0`–`s11` beim Rücksprung anders als beim Aufruf; Rücksprung landet nicht hinter dem Aufruf
+  (`ra` nicht gesichert); der Aufrufer liest nach einem Aufruf `t0`–`t6`/`a1`–`a7`, ohne sie neu zu setzen;
+  die aufgerufene Funktion liest `t0`–`t6` des Aufrufers. Aufruf = `jal`/`jalr` mit `rd = ra` (also auch `call`),
+  Rücksprung = `jalr zero, 0(ra)`/`ret`; `tail` wird richtig behandelt. Jede Stelle wird nur einmal gemeldet.
+  Anders als `runStreng` (Generator, siehe unten) werden keine Register überschrieben: Die Werte am Ende
+  sind dieselben wie ohne `--streng`. Umgesetzt in `RiscvMaschine.runMitKonvention`.
 - Beispiele: `beispiel/probelauf_beispiel.s`, `beispiel/probelauf_beispiel.c`.
 - Kontrolle: `ProbelaufTest` führt alle vom Generator erzeugten Assembler- und C-Programme
   (6 Formen × 400 Seeds) im Probelauf aus und vergleicht mit dem Interpreter des Generators.
@@ -276,6 +285,8 @@ ProgramGenerator ──► Program (AST) ──► Interpreter ──► Endwert
 die eine Funktion nicht erhalten muss (t0–t6, a1–a7), mit Zufallswerten. Eine Lösung, die sich nach einem Aufruf noch auf
 ein t- oder a-Register verlässt, fällt dabei auf, auch wenn die aufgerufene Funktion das Register zufällig nicht verändert.
 `ConventionCheck.pruefe` lässt jede Musterlösung normal und zweimal streng laufen.
+Der strenge Modus im Probelauf (`--streng`) ist eine andere Prüfung: Er meldet Verstöße direkt mit Zeile,
+statt Register zu überschreiben. Alle Musterlösungen von `rekursion`, `aufruf` und `stack` laufen auch dort ohne Meldung.
 
 Die Musterlösungen verwenden nur echte Befehle (`addi` statt `li`, `jal ra` statt `call`, `jalr zero, 0(ra)` statt `ret`),
 damit die Adressen im Listing der Stack-Aufgabe genau wie in RARS stimmen. `RecursiveFunction`, `RecursionForms`, `CallChain`, `ConventionCheck` und `AsmText` sind

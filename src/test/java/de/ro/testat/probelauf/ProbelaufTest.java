@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProbelaufTest {
@@ -312,5 +314,136 @@ class ProbelaufTest {
         CParser.SyntaxFehler f = org.junit.jupiter.api.Assertions.assertThrows(CParser.SyntaxFehler.class,
                 () -> CParser.parse("int a = 09;"));
         assertTrue(f.getMessage().contains("Oktalzahl"), f.getMessage());
+    }
+
+    // ------------------------------------------------------------------ strenger Modus (Aufrufkonvention)
+
+    private static Probelauf.Bericht streng(String asm) {
+        return Probelauf.assembler(asm, Probelauf.MAX_SCHRITTE_ASM, 0, true);
+    }
+
+    /** Rekursion nach Konvention, t-Register vor dem Aufruf gesichert, tail-Aufruf: kein Verstoss. */
+    @Test
+    void strengOhneVerstoss() {
+        String asm = """
+                main:
+                    addi a0, zero, 5
+                    addi t0, zero, 1
+                    addi sp, sp, -4
+                    sw   t0, 0(sp)          # t0 ueber den Aufruf retten
+                    jal  ra, fak
+                    lw   t0, 0(sp)
+                    addi sp, sp, 4
+                    add  s1, a0, t0
+                    call weiter
+                    li   a7, 10
+                    ecall
+                fak:
+                    addi t0, zero, 2
+                    blt  a0, t0, basis
+                    addi sp, sp, -8
+                    sw   ra, 4(sp)
+                    sw   s0, 0(sp)
+                    addi s0, a0, 0
+                    addi a0, a0, -1
+                    jal  ra, fak
+                    mul  a0, a0, s0
+                    lw   s0, 0(sp)
+                    lw   ra, 4(sp)
+                    addi sp, sp, 8
+                    jalr zero, 0(ra)
+                basis:
+                    addi a0, zero, 1
+                    jalr zero, 0(ra)
+                weiter:
+                    tail zurueck            # Endaufruf: zurueck springt direkt zum Aufrufer von weiter
+                zurueck:
+                    addi a0, zero, 0
+                    ret
+                """;
+        Probelauf.Bericht b = streng(asm);
+        assertFalse(b.fehler(), b.text());
+        assertTrue(b.text().contains("6 Aufrufe geprueft, keine Verstoesse."), b.text());
+        assertTrue(b.text().contains("s1   x9  =         121"), b.text());
+    }
+
+    @Test
+    void strengMeldetSRegisterSpUndTRegister() throws Exception {
+        String asm = new String(ProbelaufTest.class.getResourceAsStream("/probelauf/asm-konvention.s").readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        Probelauf.Bericht b = streng(asm);
+        String t = b.text();
+        assertTrue(b.fehler(), t);
+        assertTrue(t.contains("1 Aufruf geprueft, 4 Verstoesse"), t);
+        assertTrue(t.contains("FEHLER in Zeile 12: Aufrufkonvention: t0 wird gelesen, bevor die Funktion f"), t);
+        assertTrue(t.contains("FEHLER in Zeile 16: Aufrufkonvention: s0 hat beim Ruecksprung aus f den Wert 4, "
+                + "beim Aufruf in Zeile 6 war es 7"), t);
+        assertTrue(t.contains("FEHLER in Zeile 16: Aufrufkonvention: sp ist beim Ruecksprung"), t);
+        assertTrue(t.contains("FEHLER in Zeile 7: Aufrufkonvention: t0 wird gelesen, wurde aber seit dem Aufruf von f"), t);
+
+        // ohne --streng: keine Meldung, und die Werte sind in beiden Faellen dieselben
+        Probelauf.Bericht normal = Probelauf.assembler(asm, Probelauf.MAX_SCHRITTE_ASM, 0);
+        assertFalse(normal.fehler(), normal.text());
+        assertFalse(normal.text().contains("Aufrufkonvention"), normal.text());
+        RiscvParser.Programm p = RiscvParser.parse(asm);
+        assertArrayEquals(RiscvMaschine.run(p, 1000, 0).ende(), RiscvMaschine.runMitKonvention(p, 1000, 0).ende());
+    }
+
+    /** Nicht gesichertes ra: der Ruecksprung landet nicht hinter dem Aufruf. */
+    @Test
+    void strengMeldetNichtGesichertesRa() {
+        String asm = """
+                main:
+                    addi a0, zero, 3
+                    jal  ra, aussen
+                    li   a7, 10
+                    ecall
+                aussen:
+                    jal  ra, innen
+                    addi a0, a0, 1
+                    jalr zero, 0(ra)
+                innen:
+                    addi a0, a0, 1
+                    jalr zero, 0(ra)
+                """;
+        String t = streng(asm).text();
+        assertTrue(t.contains("FEHLER in Zeile 9: Aufrufkonvention: Ruecksprung nach 0x00400014 (Zeile 8) statt hinter den "
+                + "Aufruf von aussen in Zeile 3 (0x00400008)"), t);
+        assertEquals(1, t.split("Aufrufkonvention: ", -1).length - 1, "Schleife meldet dieselbe Stelle nur einmal\n" + t);
+    }
+
+    /** Alle Musterloesungen mit Funktionsaufrufen halten die Aufrufkonvention auch im strengen Probelauf ein. */
+    @Test
+    void strengMusterloesungenOhneMeldung() {
+        java.util.regex.Pattern listing = java.util.regex.Pattern.compile(
+                "\\\\begin\\{lstlisting\\}(\\[[^\\]]*\\])?\\n(.*?)\\\\end\\{lstlisting\\}", java.util.regex.Pattern.DOTALL);
+        int aufrufe = 0;
+        for (String id : List.of("rekursion", "aufruf", "stack")) {
+            for (long seed = 0; seed < 40; seed++) {
+                de.ro.testat.exercise.Exercise.Part teil = de.ro.testat.exercise.Exercises.create(id, "")
+                        .generate(new de.ro.testat.testat.JdkRandom(seed * 0x9E3779B97F4A7C15L));
+                java.util.regex.Matcher m = listing.matcher(teil.aufgabe() + teil.loesung()); // stack: Programm steht in der Aufgabe
+                while (m.find()) {
+                    // stack: Adressspalte vor jeder Zeile entfernen; %% ist ein maskiertes % (escapechar)
+                    if (m.group(2).contains("{")) {
+                        continue; // C-Code der Aufgabe
+                    }
+                    String asm = m.group(2).replace("%%", "%").replaceAll("(?m)^[0-9A-F]{8}  ", "          ");
+                    Probelauf.Bericht b = streng(asm);
+                    assertTrue(b.text().contains("Syntax: keine Fehler"), id + " " + seed + "\n" + asm + "\n" + b.text());
+                    assertFalse(b.fehler(), id + " " + seed + "\n" + asm + "\n" + b.text());
+                    if (!b.text().contains("kein Funktionsaufruf")) {
+                        aufrufe++;
+                    }
+                }
+            }
+        }
+        assertTrue(aufrufe >= 120, "Listings mit Aufrufen: " + aufrufe);
+    }
+
+    @Test
+    void strengOhneAufruf() {
+        String t = streng("addi t0, zero, 1\nadd t1, t0, t0\n").text();
+        assertTrue(t.contains("kein Funktionsaufruf (jal/jalr/call mit ra) - nichts zu pruefen."), t);
     }
 }

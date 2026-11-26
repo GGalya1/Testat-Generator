@@ -59,14 +59,14 @@ for (const zeile of readFileSync(referenz, "utf8").split("\n")) {
   let aus;
   try {
     aus = f.probelauf
-      ? gen.ausfuehren(f.quelle, f.sprache, f.schritte)
+      ? gen.ausfuehren(f.quelle, f.sprache, f.schritte, f.streng ?? "")
       : gen.erzeugen(f.vorlage, f.kette, "", f.seed);
   } catch (e) {
     aus = JSON.stringify({ ok: false, fehler: "Ausnahme in JS: " + e });
   }
   const name = f.probelauf ? "probelauf" : f.vorlage || f.kette;
   const fall = f.probelauf
-    ? `${f.probelauf} (Sprache ${f.sprache || "erkannt"}${f.schritte ? ", Schritte" : ""})`
+    ? `${f.probelauf} (Sprache ${f.sprache || "erkannt"}${f.schritte ? ", Schritte" : ""}${f.streng ? ", streng" : ""})`
     : `Seed ${f.seed}`;
   const z = zeiten.get(name) ?? [];
   z.push(performance.now() - t0);
@@ -95,7 +95,7 @@ if (ersterFehlerFall) {
   const f = ersterFehlerFall;
   console.log(`\nStack fuer ${f.probelauf ? "probelauf" : f.vorlage || f.kette} ${f.fall}:`);
   try {
-    if (f.probelauf) gen.ausfuehrenOhneSchutz(f.quelle, f.sprache, f.schritte);
+    if (f.probelauf) gen.ausfuehrenOhneSchutz(f.quelle, f.sprache, f.schritte, f.streng ?? "");
     else gen.erzeugenOhneSchutz(f.vorlage, f.kette, "", f.seed);
     console.log("  (ohne Abfangen kein Fehler)");
   } catch (e) {

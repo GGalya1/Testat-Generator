@@ -43,15 +43,17 @@ function sprache() {
 
 function spracheAnpassen() {
   const nurC = sprache() === "c";
-  $("#schritte").disabled = nurC;
-  $(".schritte").classList.toggle("aus", nurC);
+  for (const l of document.querySelectorAll(".nur-asm")) {
+    l.querySelector("input").disabled = nurC;
+    l.classList.toggle("aus", nurC);
+  }
 }
 
 // ---------------------------------------------------------------- Merken (nur in diesem Browser)
 
 function speichern() {
   clearTimeout(merkenTimer);
-  merken(SPEICHER, { quelle: code.value, sprache: sprache(), schritte: $("#schritte").checked });
+  merken(SPEICHER, { quelle: code.value, sprache: sprache(), schritte: $("#schritte").checked, streng: $("#streng").checked });
 }
 
 /** Beim Tippen nicht bei jedem Zeichen speichern; beim Ausfuehren und Verlassen sofort. */
@@ -92,7 +94,9 @@ async function ausfuehrenKlick(e) {
   speichern();
   knopf.disabled = true;
   meldung("Wird ausgeführt …");
-  const r = await generator("ausfuehren", { quelle: code.value, sprache: sprache(), schritte: $("#schritte").checked });
+  const r = await generator("ausfuehren", {
+    quelle: code.value, sprache: sprache(), schritte: $("#schritte").checked, streng: $("#streng").checked,
+  });
   knopf.disabled = false;
 
   if (!r.ok) {
@@ -162,11 +166,13 @@ if (["", "asm", "c"].includes(alt.sprache)) {
   document.querySelector(`input[name="sprache"][value="${alt.sprache}"]`).checked = true;
 }
 $("#schritte").checked = alt.schritte === true;
+$("#streng").checked = alt.streng === true;
 spracheAnpassen();
 
 for (const r of document.querySelectorAll('input[name="sprache"]')) {
   r.addEventListener("change", () => { spracheAnpassen(); spaeterSpeichern(); });
 }
 $("#schritte").addEventListener("change", spaeterSpeichern);
+$("#streng").addEventListener("change", spaeterSpeichern);
 $("#formular").addEventListener("submit", ausfuehrenKlick);
 $("#ausfuehren").disabled = false;

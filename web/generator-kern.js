@@ -43,14 +43,15 @@ export async function zipErzeugen(auftrag) {
 
 /**
  * Probelauf (eigenen Code ausfuehren). Braucht keine LaTeX-Dateien.
- * @param {{quelle:string, sprache?:""|"asm"|"c", schritte?:boolean}} auftrag
+ * @param {{quelle:string, sprache?:""|"asm"|"c", schritte?:boolean, streng?:boolean}} auftrag
  * @returns {{ok:true,sprache,erkannt,fehler:boolean,text,dauer}|{ok:false,fehler:string}}
  */
 export function probelauf(auftrag) {
   const start = performance.now();
   let r;
   try {
-    r = JSON.parse(ausfuehren(auftrag.quelle ?? "", auftrag.sprache ?? "", auftrag.schritte ? "1" : ""));
+    r = JSON.parse(ausfuehren(auftrag.quelle ?? "", auftrag.sprache ?? "", auftrag.schritte ? "1" : "",
+      auftrag.streng ? "1" : ""));
   } catch (err) {
     // z. B. RangeError, wenn der JavaScript-Stack trotz der Rekursionsgrenze nicht reicht
     const text = String(err && err.message ? err.message : err);

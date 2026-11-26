@@ -28,12 +28,14 @@ public final class Probelauf {
 
     public static final String USAGE = """
             Probelauf (eigenen Code ausfuehren, ohne Bewertung):
-              java -jar testat-generator-probelauf.jar <datei> [--asm | --c] [--schritte] [--max <n>]
+              java -jar testat-generator-probelauf.jar <datei> [--asm | --c] [--schritte] [--streng] [--max <n>]
               java -jar testat-generator.jar ausfuehren <datei> [...]      (dasselbe im Generator-jar)
 
               <datei>      .s/.asm = RISC-V-Assembler, .c = C; sonst (z. B. .txt) wird die Sprache erkannt
               --asm, --c   Sprache erzwingen
               --schritte   (nur Assembler) jeden ausgefuehrten Befehl mit geaenderten Registern zeigen
+              --streng     (nur Assembler) strenger Modus: zusaetzlich die Aufrufkonvention pruefen
+                           (sp, ra und s0-s11 erhalten; t0-t6 und a1-a7 nach einem Aufruf nicht weiterverwenden)
               --max <n>    Schrittlimit (Standard 100000 fuer Assembler, 1000000 fuer C)
             """;
 
@@ -59,12 +61,14 @@ public final class Probelauf {
         String datei = null;
         Sprache sprache = null;
         boolean schritte = false;
+        boolean streng = false;
         Integer max = null;
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--asm" -> sprache = Sprache.ASM;
                 case "--c" -> sprache = Sprache.C;
                 case "--schritte" -> schritte = true;
+                case "--streng" -> streng = true;
                 case "--max" -> {
                     if (i + 1 >= args.length) {
                         throw new IllegalArgumentException("--max braucht eine Zahl");
@@ -105,7 +109,7 @@ public final class Probelauf {
             sprache = erkenne(p.getFileName().toString(), quelle);
         }
         Bericht b = sprache == Sprache.ASM
-                ? assembler(quelle, max == null ? MAX_SCHRITTE_ASM : max, schritte ? SCHRITTE_ANZEIGEN : 0)
+                ? assembler(quelle, max == null ? MAX_SCHRITTE_ASM : max, schritte ? SCHRITTE_ANZEIGEN : 0, streng)
                 : c(quelle, max == null ? MAX_SCHRITTE_C : max);
         System.out.println("=== Probelauf: " + p.getFileName() + " (" + (sprache == Sprache.ASM ? "RISC-V-Assembler" : "C")
                 + (erkannt ? ", erkannt" : "") + ") ===");
@@ -144,6 +148,11 @@ public final class Probelauf {
     // ------------------------------------------------------------------ Assembler
 
     public static Bericht assembler(String quelle, int maxSchritte, int traceMax) {
+        return assembler(quelle, maxSchritte, traceMax, false);
+    }
+
+    /** Wie {@link #assembler(String, int, int)}; streng = zusaetzlich die Aufrufkonvention pruefen (--streng). */
+    public static Bericht assembler(String quelle, int maxSchritte, int traceMax, boolean streng) {
         String[] zeilen = quelle.replace("\r", "").split("\n", -1);
         StringBuilder sb = new StringBuilder();
         RiscvParser.Programm prog = RiscvParser.parse(quelle);
@@ -155,8 +164,22 @@ public final class Probelauf {
             return new Bericht(sb.toString(), true);
         }
         sb.append("Syntax: keine Fehler (").append(prog.befehle().size()).append(" Befehle).\n");
-        RiscvMaschine.Ergebnis e = RiscvMaschine.run(prog, maxSchritte, traceMax);
-        sb.append("Ablauf: ").append(e.endeGrund()).append(", ").append(e.schritte()).append(" Befehle ausgefuehrt.\n\n");
+        RiscvMaschine.Ergebnis e = streng
+                ? RiscvMaschine.runMitKonvention(prog, maxSchritte, traceMax)
+                : RiscvMaschine.run(prog, maxSchritte, traceMax);
+        sb.append("Ablauf: ").append(e.endeGrund()).append(", ").append(e.schritte()).append(" Befehle ausgefuehrt.\n");
+        if (streng) {
+            sb.append("Aufrufkonvention (strenger Modus): ");
+            if (e.aufrufe() == 0) {
+                sb.append("kein Funktionsaufruf (jal/jalr/call mit ra) - nichts zu pruefen.\n");
+            } else {
+                sb.append(e.aufrufe()).append(e.aufrufe() == 1 ? " Aufruf" : " Aufrufe").append(" geprueft, ")
+                        .append(e.konventionsfehler() == 0 ? "keine Verstoesse"
+                                : e.konventionsfehler() + (e.konventionsfehler() == 1 ? " Verstoss (siehe unten)" : " Verstoesse (siehe unten)"))
+                        .append(".\n");
+            }
+        }
+        sb.append("\n");
 
         sb.append("Register am Ende (nur geaenderte):\n");
         boolean irgendwas = false;
@@ -186,7 +209,7 @@ public final class Probelauf {
                     .append(":\n");
             e.trace().forEach(t -> sb.append("  ").append(t).append("\n"));
         }
-        return new Bericht(sb.toString(), e.abgebrochen());
+        return new Bericht(sb.toString(), e.abgebrochen() || e.konventionsfehler() > 0);
     }
 
     // ------------------------------------------------------------------ C

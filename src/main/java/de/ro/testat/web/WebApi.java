@@ -190,13 +190,14 @@ public final class WebApi {
      * @param quelle   RISC-V-Assembler oder C
      * @param sprache  "asm", "c" oder leer (am Inhalt erkennen)
      * @param schritte "1" = bei Assembler jeden ausgefuehrten Befehl zeigen (wie --schritte)
+     * @param streng   "1" = bei Assembler die Aufrufkonvention pruefen (wie --streng)
      * @return {@code {"ok":true,"sprache":"asm"|"c","erkannt":bool,"fehler":bool,"text":"..."}}
      *         (fehler = Syntax- oder Laufzeitfehler im Programm) oder {@code {"ok":false,"fehler":"..."}}
      */
     @JSExport
-    public static String ausfuehren(String quelle, String sprache, String schritte) {
+    public static String ausfuehren(String quelle, String sprache, String schritte, String streng) {
         try {
-            return ausfuehrenOderFehler(quelle == null ? "" : quelle, leer(sprache), leer(schritte));
+            return ausfuehrenOderFehler(quelle == null ? "" : quelle, leer(sprache), leer(schritte), leer(streng));
         } catch (IllegalArgumentException e) {
             return fehler(e.getMessage());
         } catch (Throwable e) {
@@ -206,11 +207,11 @@ public final class WebApi {
 
     /** Wie {@link #ausfuehren}, aber ohne Fehler abzufangen. Nur zur Fehlersuche (web/test/smoke.mjs). */
     @JSExport
-    public static String ausfuehrenOhneSchutz(String quelle, String sprache, String schritte) {
-        return ausfuehrenOderFehler(quelle == null ? "" : quelle, leer(sprache), leer(schritte));
+    public static String ausfuehrenOhneSchutz(String quelle, String sprache, String schritte, String streng) {
+        return ausfuehrenOderFehler(quelle == null ? "" : quelle, leer(sprache), leer(schritte), leer(streng));
     }
 
-    private static String ausfuehrenOderFehler(String quelle, String sprache, String schritte) {
+    private static String ausfuehrenOderFehler(String quelle, String sprache, String schritte, String streng) {
         String q = !quelle.isEmpty() && quelle.charAt(0) == '\uFEFF' ? quelle.substring(1) : quelle;
         if (q.trim().isEmpty()) {
             throw new IllegalArgumentException("Bitte zuerst Code eingeben.");
@@ -231,7 +232,8 @@ public final class WebApi {
             throw new IllegalArgumentException("Unbekannte Sprache: " + sprache);
         }
         Probelauf.Bericht b = sp == Probelauf.Sprache.ASM
-                ? Probelauf.assembler(q, Probelauf.MAX_SCHRITTE_ASM, schritte.equals("1") ? Probelauf.SCHRITTE_ANZEIGEN : 0)
+                ? Probelauf.assembler(q, Probelauf.MAX_SCHRITTE_ASM, schritte.equals("1") ? Probelauf.SCHRITTE_ANZEIGEN : 0,
+                        streng.equals("1"))
                 : Probelauf.c(q, Probelauf.MAX_SCHRITTE_C, MAX_TIEFE_WEB);
         return "{\"ok\":true,\"sprache\":" + json(sp == Probelauf.Sprache.ASM ? "asm" : "c")
                 + ",\"erkannt\":" + erkannt + ",\"fehler\":" + b.fehler() + ",\"text\":" + json(b.text()) + "}";

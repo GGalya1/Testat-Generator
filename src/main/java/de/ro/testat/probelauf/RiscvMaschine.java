@@ -3,8 +3,10 @@ package de.ro.testat.probelauf;
 import de.ro.testat.probelauf.RiscvParser.Befehl;
 import de.ro.testat.probelauf.RiscvParser.Programm;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,10 +23,13 @@ public final class RiscvMaschine {
     public static final int SP_START = 0x7FFF_EFFC;
     public static final int GP_START = 0x1000_8000;
 
-    /** Ergebnis eines Laufs. */
+    /**
+     * Ergebnis eines Laufs. aufrufe und konventionsfehler zaehlen nur mit Pruefung der
+     * Aufrufkonvention ({@link #runMitKonvention}), sonst 0.
+     */
     public record Ergebnis(int[] start, int[] ende, Map<Integer, Integer> geschrieben, String ausgabe,
                            int schritte, String endeGrund, boolean abgebrochen, List<Meldung> meldungen,
-                           List<String> trace) {
+                           List<String> trace, int aufrufe, int konventionsfehler) {
     }
 
     private final Programm p;
@@ -47,6 +52,24 @@ public final class RiscvMaschine {
 
     public static Ergebnis run(Programm p, int maxSchritte, int traceMax) {
         return new RiscvMaschine(p, traceMax).lauf(maxSchritte);
+    }
+
+    /**
+     * Wie {@link #run(Programm, int, int)}, prueft dabei die Aufrufkonvention (Probelauf --streng)
+     * und meldet jeden Verstoss als FEHLER mit Zeile:
+     * <ul>
+     * <li>sp und s0-s11 sind nach dem Ruecksprung anders als beim Aufruf,</li>
+     * <li>der Ruecksprung fuehrt nicht hinter den Aufruf (ra nicht gesichert),</li>
+     * <li>der Aufrufer liest nach einem Aufruf t0-t6 oder a1-a7, ohne sie neu zu setzen,</li>
+     * <li>die aufgerufene Funktion liest t0-t6 des Aufrufers.</li>
+     * </ul>
+     * Register werden dabei nicht veraendert (anders als {@link #runStreng}): Die Werte am Ende
+     * sind dieselben wie ohne Pruefung.
+     */
+    public static Ergebnis runMitKonvention(Programm p, int maxSchritte, int traceMax) {
+        RiscvMaschine m = new RiscvMaschine(p, traceMax);
+        m.konvention = true;
+        return m.lauf(maxSchritte);
     }
 
     /** Mit vorgegebenen Startwerten einzelner Register (Registernummer -> Wert). */
@@ -154,7 +177,8 @@ public final class RiscvMaschine {
             worte.put(adr, lade(adr, 4, false));
         }
         zugriffe = aufzeichnung;
-        return new Ergebnis(start, x.clone(), worte, ausgabe.toString(), schritte, grund, abbruch, meldungen, trace);
+        return new Ergebnis(start, x.clone(), worte, ausgabe.toString(), schritte, grund, abbruch, meldungen, trace,
+                anzahlAufrufe, verstoesse);
     }
 
     private static final int ENDE_ECALL = -2;
@@ -172,6 +196,9 @@ public final class RiscvMaschine {
 
     /** Fuehrt einen Befehl aus, liefert den naechsten Befehlsindex. */
     private int schritt(Befehl i, int pc) {
+        if (konvention) {
+            pruefeLesen(i);
+        }
         int a = x[i.rs1()], c = x[i.rs2()], imm = i.imm();
         int next = pc + 1;
         switch (i.op()) {
@@ -242,10 +269,18 @@ public final class RiscvMaschine {
             case JAL -> {
                 set(i.rd(), adresse(pc + 1));
                 next = imm;
+                if (konvention && i.rd() == 1) {
+                    aufruf(i, adresse(pc + 1), adresse(imm));
+                }
             }
             case JALR -> {
                 int ziel = (a + imm) & ~1;
                 set(i.rd(), adresse(pc + 1));
+                if (konvention && i.rd() == 1) {
+                    aufruf(i, adresse(pc + 1), ziel);
+                } else if (konvention && i.rd() == 0 && i.rs1() == 1) {
+                    ruecksprung(i, ziel);
+                }
                 next = sprungziel(ziel);
                 if (streng != null && i.rd() == 0 && i.rs1() == 1) {
                     for (int r : FLUECHTIG) {
@@ -299,7 +334,116 @@ public final class RiscvMaschine {
     private void set(int rd, int v) {
         if (rd != 0) {
             x[rd] = v;
+            ungueltig[rd] = null;
         }
+    }
+
+    // ------------------------------------------------------------------ Aufrufkonvention (Probelauf --streng)
+
+    /** Muss eine Funktion erhalten: sp, s0-s11. */
+    private static final int[] ERHALTEN = {2, 8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27};
+    /** t0-t6: Inhalt ist beim Eintritt in eine Funktion beliebig. */
+    private static final int[] TEMPORAER = {5, 6, 7, 28, 29, 30, 31};
+
+    /** Offener Aufruf: Ruecksprungadresse, Zeile des Aufrufs, Name der Funktion, sp/s0-s11 beim Aufruf. */
+    private record Aufruf(int rueck, int zeile, String name, int[] werte) {
+    }
+
+    private boolean konvention;
+    private final ArrayDeque<Aufruf> aufrufe = new ArrayDeque<>();
+    private int anzahlAufrufe;
+    private int verstoesse;
+    /** Pro Register: warum der Wert gerade nicht verwendet werden darf (null = in Ordnung). */
+    private final String[] ungueltig = new String[32];
+    /** Schon gemeldete Verstoesse (Zeile + Art), damit eine Schleife nicht dieselbe Meldung wiederholt. */
+    private final Set<String> gemeldet = new HashSet<>();
+
+    private void aufruf(Befehl i, int rueck, int ziel) {
+        int[] werte = new int[ERHALTEN.length];
+        for (int k = 0; k < ERHALTEN.length; k++) {
+            werte[k] = x[ERHALTEN[k]];
+        }
+        String name = i.marke() != null ? i.marke() : markeAn(ziel);
+        aufrufe.push(new Aufruf(rueck, i.zeile(), name, werte));
+        anzahlAufrufe++;
+        for (int r : TEMPORAER) {
+            ungueltig[r] = "bevor die Funktion " + name + " es selbst gesetzt hat. Beim Aufruf (Zeile " + i.zeile()
+                    + ") ist sein Inhalt beliebig; Argumente kommen nur in a0-a7.";
+        }
+    }
+
+    private void ruecksprung(Befehl i, int ziel) {
+        Aufruf a = aufrufe.peek();
+        if (a == null) {
+            return; // Ruecksprung aus dem Hauptprogramm: nichts zu vergleichen
+        }
+        if (ziel != a.rueck()) {
+            int index = p.index(ziel);
+            String wohin = index >= 0 ? " (Zeile " + p.befehle().get(index).zeile() + ")" : "";
+            melde(i.zeile(), "ra", String.format("Ruecksprung nach 0x%08X", ziel) + wohin + " statt hinter den Aufruf von "
+                    + a.name() + " in Zeile " + a.zeile() + String.format(" (0x%08X)", a.rueck())
+                    + ". Vermutlich wurde ra vor einem weiteren Aufruf nicht gesichert und danach nicht wiederhergestellt.");
+            return;
+        }
+        aufrufe.pop();
+        for (int k = 0; k < ERHALTEN.length; k++) {
+            int r = ERHALTEN[k];
+            if (x[r] == a.werte()[k]) {
+                continue;
+            }
+            if (r == 2) {
+                melde(i.zeile(), "sp", String.format("sp ist beim Ruecksprung aus %s 0x%08X, beim Aufruf in Zeile %d war es 0x%08X.",
+                        a.name(), x[r], a.zeile(), a.werte()[k]) + " Der Stack muss vor dem Ruecksprung wieder freigegeben werden.");
+            } else {
+                melde(i.zeile(), RiscvParser.ABI[r], RiscvParser.ABI[r] + " hat beim Ruecksprung aus " + a.name() + " den Wert "
+                        + x[r] + ", beim Aufruf in Zeile " + a.zeile() + " war es " + a.werte()[k]
+                        + ". s-Register muss die Funktion auf dem Stack sichern und vor dem Ruecksprung wiederherstellen.");
+            }
+        }
+        for (int r : FLUECHTIG) {
+            ungueltig[r] = "wurde aber seit dem Aufruf von " + a.name() + " in Zeile " + a.zeile()
+                    + " nicht neu gesetzt. t0-t6 und a1-a7 darf jede Funktion veraendern: den Wert vor dem Aufruf"
+                    + " auf dem Stack sichern oder in ein s-Register legen.";
+        }
+    }
+
+    /** Liest der Befehl ein Register, dessen Inhalt nach der Aufrufkonvention nicht gilt? */
+    private void pruefeLesen(Befehl i) {
+        switch (i.op()) {
+            case LUI, AUIPC, JAL, LI, LA -> {
+            }
+            case ECALL -> lese(i, 17);
+            case ADDI, ANDI, ORI, XORI, SLTI, SLTIU, SLLI, SRLI, SRAI, LB, LH, LW, LBU, LHU, JALR -> lese(i, i.rs1());
+            default -> {
+                lese(i, i.rs1());
+                lese(i, i.rs2());
+            }
+        }
+    }
+
+    private void lese(Befehl i, int r) {
+        if (ungueltig[r] != null) {
+            String text = ungueltig[r];
+            ungueltig[r] = null; // nur die erste Verwendung melden
+            melde(i.zeile(), RiscvParser.ABI[r], RiscvParser.ABI[r] + " wird gelesen, " + text);
+        }
+    }
+
+    private void melde(int zeile, String art, String text) {
+        if (gemeldet.add(zeile + ":" + art)) {
+            verstoesse++;
+            meldungen.add(Meldung.fehler(zeile, "Aufrufkonvention: " + text));
+        }
+    }
+
+    /** Erste Marke mit dieser Adresse, sonst die Adresse selbst. */
+    private String markeAn(int adresse) {
+        for (Map.Entry<String, Integer> e : p.marken().entrySet()) {
+            if (e.getValue() == adresse) {
+                return e.getKey();
+            }
+        }
+        return String.format("0x%08X", adresse);
     }
 
     private int lade(int adr, int bytes, boolean vorzeichen) {

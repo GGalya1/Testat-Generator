@@ -102,38 +102,38 @@ class WebApiTest {
 
     @Test
     void probelaufAssemblerErkanntUndSchritte() {
-        String json = WebApi.ausfuehren("addi t0, zero, 5\naddi t1, t0, 1\n", "", "1");
+        String json = WebApi.ausfuehren("addi t0, zero, 5\naddi t1, t0, 1\n", "", "1", "");
         assertTrue(json.startsWith("{\"ok\":true,\"sprache\":\"asm\",\"erkannt\":true,\"fehler\":false"), json);
         assertTrue(json.contains("t1   x6  =           6"), json);
         assertTrue(json.contains("Ausgefuehrte Befehle"), json);
-        assertFalse(WebApi.ausfuehren("addi t0, zero, 5", "asm", "").contains("Ausgefuehrte Befehle"));
+        assertFalse(WebApi.ausfuehren("addi t0, zero, 5", "asm", "", "").contains("Ausgefuehrte Befehle"));
     }
 
     @Test
     void probelaufWieKommandozeile() {
         String quelle = "int x = 2;\nx = x * 21;\n";
-        String json = WebApi.ausfuehren(quelle, "c", "");
+        String json = WebApi.ausfuehren(quelle, "c", "", "");
         assertTrue(json.contains("\"erkannt\":false,\"fehler\":false"), json);
         assertTrue(json.contains(WebApi.json(de.ro.testat.probelauf.Probelauf.c(quelle, 1_000_000).text())), json);
     }
 
     @Test
     void probelaufFehlerImProgramm() {
-        String syntax = WebApi.ausfuehren("addi t0, zero\nfoo a0\n", "asm", "");
+        String syntax = WebApi.ausfuehren("addi t0, zero\nfoo a0\n", "asm", "", "");
         assertTrue(syntax.startsWith("{\"ok\":true") && syntax.contains("\"fehler\":true"), syntax);
         assertTrue(syntax.contains("Unbekannter Befehl 'foo'"), syntax);
-        String tief = WebApi.ausfuehren("int f(int n) { return f(n + 1); }\nint main() { return f(0); }\n", "", "");
+        String tief = WebApi.ausfuehren("int f(int n) { return f(n + 1); }\nint main() { return f(0); }\n", "", "", "");
         assertTrue(tief.contains("\"fehler\":true"), tief);
         assertTrue(tief.contains("mehr als " + WebApi.MAX_TIEFE_WEB + " Aufrufe"), tief);
     }
 
     @Test
     void probelaufEingabeFehler() {
-        assertTrue(WebApi.ausfuehren("  \n ", "", "").contains("Bitte zuerst Code eingeben"));
-        assertTrue(WebApi.ausfuehren(null, null, null).startsWith("{\"ok\":false"));
-        assertTrue(WebApi.ausfuehren("x = 1;", "pascal", "").contains("Unbekannte Sprache"));
-        assertTrue(WebApi.ausfuehren("x".repeat(WebApi.MAX_QUELLE + 1), "", "").contains("zu lang"));
-        assertTrue(WebApi.ausfuehren("\uFEFFaddi t0, zero, 1", "", "").contains("\"fehler\":false"));
+        assertTrue(WebApi.ausfuehren("  \n ", "", "", "").contains("Bitte zuerst Code eingeben"));
+        assertTrue(WebApi.ausfuehren(null, null, null, null).startsWith("{\"ok\":false"));
+        assertTrue(WebApi.ausfuehren("x = 1;", "pascal", "", "").contains("Unbekannte Sprache"));
+        assertTrue(WebApi.ausfuehren("x".repeat(WebApi.MAX_QUELLE + 1), "", "", "").contains("zu lang"));
+        assertTrue(WebApi.ausfuehren("\uFEFFaddi t0, zero, 1", "", "", "").contains("\"fehler\":false"));
     }
 
     @Test

@@ -317,9 +317,10 @@ textarea {
 }
 .code-hilfe { margin-top: 0.35rem; color: var(--grau); font-size: 0.85rem; }
 
-.schritte { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; cursor: pointer; }
-.schritte input { accent-color: var(--rs1); width: 1.05rem; height: 1.05rem; margin: 0; }
-.schritte.aus { color: var(--grau); cursor: default; }
+.option { display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 1rem; cursor: pointer; }
+.option + .option { margin-top: 0.6rem; }
+.option input { accent-color: var(--rs1); width: 1.05rem; height: 1.05rem; margin: 0.2rem 0 0; flex: none; }
+.option.aus { color: var(--grau); cursor: default; }
 
 .abschluss .taste { color: var(--grau); font-size: 0.88rem; align-self: center; }
 

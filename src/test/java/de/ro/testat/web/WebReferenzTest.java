@@ -57,12 +57,13 @@ class WebReferenzTest {
             for (Path datei : probelaufDateien()) {
                 String quelle = Files.readString(datei, StandardCharsets.UTF_8);
                 String name = datei.getFileName().toString();
-                faelle += probelauf(w, name, quelle, "", "");
+                faelle += probelauf(w, name, quelle, "", "", "");
                 if (name.endsWith(".s")) {
-                    faelle += probelauf(w, name, quelle, "", "1");
-                    faelle += probelauf(w, name, quelle, "c", ""); // Assembler als C: Syntaxfehler
+                    faelle += probelauf(w, name, quelle, "", "1", "");
+                    faelle += probelauf(w, name, quelle, "", "", "1");     // strenger Modus
+                    faelle += probelauf(w, name, quelle, "c", "", "");     // Assembler als C: Syntaxfehler
                 } else {
-                    faelle += probelauf(w, name, quelle, "c", "");
+                    faelle += probelauf(w, name, quelle, "c", "", "");
                 }
             }
         }
@@ -77,11 +78,13 @@ class WebReferenzTest {
         }
     }
 
-    private static int probelauf(Writer w, String name, String quelle, String sprache, String schritte) throws IOException {
-        String aus = WebApi.ausfuehren(quelle, sprache, schritte);
+    private static int probelauf(Writer w, String name, String quelle, String sprache, String schritte, String streng)
+            throws IOException {
+        String aus = WebApi.ausfuehren(quelle, sprache, schritte, streng);
         assertTrue(aus.startsWith("{\"ok\":true"), name + ": " + aus);
         w.write("{\"probelauf\":" + WebApi.json(name) + ",\"quelle\":" + WebApi.json(quelle)
                 + ",\"sprache\":" + WebApi.json(sprache) + ",\"schritte\":" + WebApi.json(schritte)
+                + ",\"streng\":" + WebApi.json(streng)
                 + ",\"ausgabe\":" + WebApi.json(aus) + "}\n");
         return 1;
     }
